@@ -47,11 +47,12 @@ class IdTrackerAiGUI(BaseWidget):
         self._video     = ControlFile('File')
 
         self._save_summaries = ControlCheckBox('Save tensorboard summaries')
-        self._learning_rate  = ControlNumber('Learning rate', default=0.005)
+        self._learning_rate  = ControlNumber('Learning rate', default=0.005, decimals=3)
         self._dropout_ratio  = ControlNumber(
             'Dropout ratio. If 1.0, no dropout is performed',
             default=1.0,
-            helptext='For fully connected layers excluding softmax'
+            helptext='For fully connected layers excluding softmax',
+            decimals=1
         ) 
         self._optimiser       = ControlCheckBox('Optimiser. Acceptable optimisers: SGD and Adam', default='SGD')
         self._layers_to_train = ControlCombo('Layers to train')
