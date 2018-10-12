@@ -53,15 +53,15 @@ class IdTrackerAiGUI(BaseWidget):
             default=1.0,
             helptext='For fully connected layers excluding softmax',
             decimals=1
-        ) 
+        )
         self._optimiser       = ControlCheckBox('Optimiser. Acceptable optimisers: SGD and Adam', default='SGD')
         self._layers_to_train = ControlCombo('Layers to train')
         self._transfer_folder = ControlDir(
-            'Knowlegde transfer folder', 
+            'Knowlegde transfer folder',
             helptext='Path to load convolutional weights from a pre-trained model'
         )
         self._tracking = ControlButton('Start protocol cascade', default=self.step2_tracking)
-        
+
 
         self.formset = [
             '_session',
@@ -79,11 +79,11 @@ class IdTrackerAiGUI(BaseWidget):
         self._layers_to_train.add_item('all')
         self._layers_to_train.add_item('fully')
 
-        self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
+        self._video.value = '/home/chronos2/Videos/example_video/idtrackerai_video_example.avi'
 
         self._learning_rate.decimals = 3
         self._dropout_ratio.decimals = 1
-        
+
 
     def step2_tracking(self):
 
@@ -103,7 +103,7 @@ class IdTrackerAiGUI(BaseWidget):
             list_of_fragments=list_of_fragments,
             list_of_global_fragments=list_of_global_fragments
         )
-        
+
         tracker = TrackerAPI( chosen_video )
 
         tracker.init_tracking()
@@ -123,9 +123,9 @@ class IdTrackerAiGUI(BaseWidget):
 #Execute the application
 if __name__ == "__main__":
     import logging, locale
-    
+
     logging.basicConfig(level=logging.DEBUG, format="%(levelname)s \t %(name)-50s %(message)s")
-    
+
     from pyforms_gui.appmanager import start_app
-    
+
     start_app( IdTrackerAiGUI, geometry=(2800,100,800, 600) )

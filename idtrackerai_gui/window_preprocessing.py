@@ -5,6 +5,7 @@ from pyforms.controls import ControlText
 from pyforms.controls import ControlCheckBox
 from pyforms.controls import ControlFile
 from pyforms.controls import ControlPlayer
+from pyforms.controls import ControlNumber
 from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlMatplotlib
@@ -38,7 +39,7 @@ def create_ellipse_points( start, end ):
     width = end[0]-start[0]
     height = end[1]-start[1]
     center = ( start[0] + width/2, start[1] + height/2 )
-    
+
     distance = points_distance(start, end )
     nPoints = distance / 30
     if nPoints<8:nPoints = 8.0
@@ -69,6 +70,8 @@ class IdTrackerAiGUI(BaseWidget):
 
         self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt)
         self._chcksegm  = ControlCheckBox('Check segmentation')
+        self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2)
+        # self._resreduct = ControlText('Resolution reduction', detault='1.')
 
         self._intensity = ControlBoundingSlider('Intensity', default=[0,135], min=0, max=255, changed_event=self._player.refresh)
         self._area      = ControlBoundingSlider('Area',      default=[150,60000], min=0, max=60000)
@@ -81,7 +84,7 @@ class IdTrackerAiGUI(BaseWidget):
 
         self._pre_processing = ControlButton('Pre processing', default=self.step1_pre_processing)
         self._tracking       = ControlButton('Start protocol cascade', default=self.step2_tracking)
-        
+
 
         self.formset = [
             '_session',
@@ -90,7 +93,7 @@ class IdTrackerAiGUI(BaseWidget):
             '_range',
             ('_circlebtn','_rectbtn',' ', ' '),
             ('_applyroi','_roi'),
-            ('_bgsub','_chcksegm',' ', ' '),
+            ('_bgsub','_chcksegm','_resreduct', ' '),
             '_intensity',
             '_area',
             '_nblobs',
@@ -113,12 +116,13 @@ class IdTrackerAiGUI(BaseWidget):
 
     def __bgsub_changed_evt(self):
         if self._bgsub.value:
-            #video      = cv2.VideoCapture(self._video.value)
-            #background = cumpute_background(video)
+            # video      = cv2.VideoCapture(self._video.value)
+            # background = cumpute_background(video)
             pass
         else:
             pass
-    
+
+
 
     def __graph_on_draw_evt(self, figure):
         areas = self._detected_areas
@@ -151,7 +155,7 @@ class IdTrackerAiGUI(BaseWidget):
         points = self._roi.value
         try:
             points = eval( self._roi.value )
-            cv2.polylines(frame, [np.array(points,np.int32)], True, (0,255,0), 2, lineType=cv2.LINE_AA)         
+            cv2.polylines(frame, [np.array(points,np.int32)], True, (0,255,0), 2, lineType=cv2.LINE_AA)
             for i, point in enumerate( points ):
                 if self._selected_point == i:
                     cv2.circle(frame, point, 4, (0,0,255), 2)
@@ -159,7 +163,7 @@ class IdTrackerAiGUI(BaseWidget):
                     cv2.circle(frame, point, 4, (0,255,0), 2)
         except:
             pass
-   
+
         if self._start_point and self._end_point:
             if self._rectbtn.checked:
                 cv2.rectangle(frame, self._start_point, self._end_point, (233,44,44), 1 )
@@ -179,7 +183,7 @@ class IdTrackerAiGUI(BaseWidget):
         mask   = np.zeros( (height, width) , dtype=np.uint8)
         if points:
             points = eval( self._roi.value )
-            mask   = cv2.fillPoly(mask, [np.array(points,np.int32)], (255,255,255))       
+            mask   = cv2.fillPoly(mask, [np.array(points,np.int32)], (255,255,255))
         else:
             mask = mask + 255
 
@@ -194,21 +198,26 @@ class IdTrackerAiGUI(BaseWidget):
         min_thresh, max_thresh = self._intensity.value
         min_area,   max_area   = self._area.value
 
+        #reduction = self._resreduct.value
+        reduction = 0.3
+        frame = cv2.resize(frame, None, fx=reduction, fy=reduction, interpolation=cv2.INTER_AREA)
+
+
         # Convert the frame to black & white
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) if len(frame.shape)>2 else frame
         mask = self.__create_mask(*gray.shape)
 
         av_intensity = np.float32(np.mean(gray))
         av_frame     = gray / av_intensity
-        bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, None, mask, False)
 
+        bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, None, mask, False)
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(bin_frame.copy(), frame, int(min_area), int(max_area))
         self._detected_areas = areas
         if self._nblobs.value<len(areas):
             self._nblobs.value = len(areas)
 
         cv2.drawContours(frame, good_cnt, -1, color=(0,0,255), thickness=-1)
-        
+
         self.__draw_rois(frame)
 
         self._graph.draw()
@@ -216,7 +225,7 @@ class IdTrackerAiGUI(BaseWidget):
 
     def select_point(self,x, y):
         try:
-            coord  = ( x, y )                  
+            coord  = ( x, y )
             points = eval(self._roi.value)
             for i, point in enumerate( points):
                 if points_distance( coord, point ) <= 5:
@@ -238,15 +247,15 @@ class IdTrackerAiGUI(BaseWidget):
     def on_player_double_click_in_video_window(self, event, x, y):
         mouse = ( int(x), int(y) )
         distances = []
-        
+
         try:
             points   = list(eval(self._roi.value))
             n_points = len(points)
             for point_index, point in enumerate( points ):
                 next_point = points[ (point_index+1) % n_points ]
                 distance = self.get_intersection_point_distance(mouse, point, next_point )
-                
-                if distance<=5: 
+
+                if distance<=5:
                     vector = next_point[0]-point[0], next_point[1]-point[1]
                     center = point[0]+vector[0]/2,point[1]+vector[1]/2
                     radius = points_distance(center, point)
@@ -262,23 +271,23 @@ class IdTrackerAiGUI(BaseWidget):
             points.insert( point_index + 1, mouse )
 
             self._roi.value = str(points)[1:-1]
-           
+
             self._selected_point = point_index + 1
 
             if not self._player.is_playing: self._player.refresh()
-            
-    
+
+
     def on_player_click_in_video_window(self, event, x, y):
         self._selected_point = None
 
         if not self._rectbtn.checked and not self._circlebtn.checked:
             self.select_point( int(x), int(y) )
-        
-        
+
+
     def on_player_drag_in_video_window(self, start_point, end_point):
         self._start_point = ( int(start_point[0]), int(start_point[1]) )
         self._end_point   = ( int(end_point[0]), int(end_point[1]) )
-        
+
         if self._selected_point!=None:
             try:
                 points = list(eval(self._roi.value))
@@ -287,12 +296,12 @@ class IdTrackerAiGUI(BaseWidget):
             except Exception as e:
                 print(e)
 
-        if not self._player.is_playing: self._player.refresh() 
-            
+        if not self._player.is_playing: self._player.refresh()
+
     def on_player_end_drag_in_video_window(self, start_point, end_point):
         self._start_point = int(start_point[0]), int(start_point[1])
         self._end_point   = int(end_point[0]),   int(end_point[1])
-        
+
         points = None
         if self._rectbtn.checked:
             points = create_rectangle_points(self._start_point, self._end_point)
@@ -306,7 +315,7 @@ class IdTrackerAiGUI(BaseWidget):
         self._rectbtn.checked   = False
         self._circlebtn.checked = False
 
-        if not self._player.is_playing: self._player.refresh() 
+        if not self._player.is_playing: self._player.refresh()
 
 
     def step1_pre_processing(self):
@@ -315,7 +324,7 @@ class IdTrackerAiGUI(BaseWidget):
             video_path=self._video.value
         )
         video_object.get_info()
-        
+
         video_object._min_threshold = self._intensity.value[0]
         video_object._max_threshold = self._intensity.value[1]
 
@@ -327,7 +336,7 @@ class IdTrackerAiGUI(BaseWidget):
         video_object._number_of_animals = int(self._nblobs.value)
         video_object._apply_ROI = self._applyroi.value
 
-        video_object.resolution_reduction = 1.
+        video_object.resolution_reduction = self._resreduct.value
         video_object._number_of_channels  = 1
         video_object._ROI = self.__create_mask(video_object.height, video_object.width)
 
@@ -342,10 +351,10 @@ class IdTrackerAiGUI(BaseWidget):
 
         logger.debug('call: init_preview')
         pre.init_preview()
-        
+
         logger.debug('call: init_preproc_parameters')
         pre.init_preproc_parameters()
-        
+
         logger.debug('call: segment')
         pre.segment(
             self._intensity.value[0],
@@ -353,29 +362,29 @@ class IdTrackerAiGUI(BaseWidget):
             self._area.value[0],
             self._area.value[1]
         )
-        
+
         logger.debug('call: compute_list_of_blobs')
         pre.compute_list_of_blobs()
-        
+
         logger.debug('call: check_segmentation_consistency')
         pre.check_segmentation_consistency(self._chcksegm.value)
-        
+
         logger.debug('call: save_list_of_blobs')
         pre.save_list_of_blobs()
-        
+
         logger.debug('call: model_area_and_crossing_detector')
         pre.model_area_and_crossing_detector()
-        
+
         logger.debug('call: train_and_apply_crossing_detector')
         pre.train_and_apply_crossing_detector()
-        
+
         logger.debug('call: generate_list_of_fragments_and_global_fragments')
         pre.generate_list_of_fragments_and_global_fragments()
 
         trainner = pre.crossing_detector_trainer
         list_of_fragments = pre.list_of_fragments
         list_of_global_fragments = pre.list_of_global_fragments
-        
+
         if trainner:
 
             import matplotlib
@@ -388,7 +397,7 @@ class IdTrackerAiGUI(BaseWidget):
                 'ytick.labelsize' : 8,
                 'legend.fontsize':  8
             })
-            
+
             fig, ax_arr = plt.subplots(3)
             fig.set_facecolor((.188, .188, .188))
             fig.subplots_adjust(left=0.1, bottom=0.15, right=.9, top=.95, wspace=None, hspace=1)
@@ -400,9 +409,9 @@ class IdTrackerAiGUI(BaseWidget):
             plt.show()
 
             print('end')
-        
+
         #protocol1(video, list_of_fragments, list_of_global_fragments)
-    
+
 
     def step2_tracking(self):
 
@@ -422,7 +431,7 @@ class IdTrackerAiGUI(BaseWidget):
             list_of_fragments=list_of_fragments,
             list_of_global_fragments=list_of_global_fragments
         )
-        
+
         tracker = TrackerAPI( chosen_video )
 
         tracker.init_tracking()
@@ -439,7 +448,7 @@ class IdTrackerAiGUI(BaseWidget):
         """
 
     def __update_progress(self, value, label=None, total=None):
-        
+
         if total is not None: self._progress.max   = total
         if label is not None: self._progress.label = label
 
