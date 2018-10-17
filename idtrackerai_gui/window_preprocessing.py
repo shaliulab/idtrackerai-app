@@ -70,7 +70,7 @@ class IdTrackerAiGUI(BaseWidget):
 
         self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt)
         self._chcksegm  = ControlCheckBox('Check segmentation')
-        self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2)
+        self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2, step=0.1)
         # self._resreduct = ControlText('Resolution reduction', detault='1.')
 
         self._intensity = ControlBoundingSlider('Intensity', default=[0,135], min=0, max=255, changed_event=self._player.refresh)
@@ -198,8 +198,7 @@ class IdTrackerAiGUI(BaseWidget):
         min_thresh, max_thresh = self._intensity.value
         min_area,   max_area   = self._area.value
 
-        #reduction = self._resreduct.value
-        reduction = 0.3
+        reduction = self._resreduct.value
         frame = cv2.resize(frame, None, fx=reduction, fy=reduction, interpolation=cv2.INTER_AREA)
 
 
