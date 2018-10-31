@@ -29,6 +29,10 @@ from .helpers import Chosen_Video
 
 logger = logging.getLogger(__name__)
 
+import tensorflow as tf
+with tf.Session() as sess:
+    logger.info( "TENSORFLOW DEVICES: "+str(sess.list_devices()) )
+
 def points_distance(p1, p2):
     return  math.hypot(p2[0]-p1[0], p2[1]-p1[1])
 
