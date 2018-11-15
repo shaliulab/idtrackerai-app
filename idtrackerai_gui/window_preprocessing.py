@@ -13,6 +13,8 @@ from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
 from idtrackerai.utils.video_utils import segment_frame, blob_extractor, cumpute_background
+from idtrackerai.utils.py_utils import  getExistentFiles
+from idtrackerai.constants import PROCESSES
 
 #from idtrackerai.preprocessing.pre_processing import step1_pre_processing
 #from idtrackerai.preprocessing.pre_processing import step2_tracking
@@ -434,6 +436,8 @@ class IdTrackerAiGUI(BaseWidget):
             list_of_fragments=list_of_fragments,
             list_of_global_fragments=list_of_global_fragments
         )
+
+        chosen_video.existent_files, chosen_video.old_video = getExistentFiles(chosen_video.video, PROCESSES)
 
         tracker = TrackerAPI( chosen_video )
 
