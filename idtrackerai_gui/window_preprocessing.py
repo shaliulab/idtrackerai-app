@@ -1,11 +1,10 @@
-import numpy as np, cv2, math, os, pickle, logging
+import numpy as np, cv2, math, os, logging
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
 from pyforms.controls import ControlCheckBox
 from pyforms.controls import ControlFile
 from pyforms.controls import ControlPlayer
-from pyforms.controls import ControlNumber
 from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlMatplotlib
@@ -16,9 +15,6 @@ from idtrackerai.utils.video_utils import segment_frame, blob_extractor, cumpute
 from idtrackerai.utils.py_utils import  getExistentFiles
 from idtrackerai.constants import PROCESSES
 
-#from idtrackerai.preprocessing.pre_processing import step1_pre_processing
-#from idtrackerai.preprocessing.pre_processing import step2_tracking
-#from idtrackerai.preprocessing.pre_processing import protocol1
 from idtrackerai.list_of_fragments            import ListOfFragments
 from idtrackerai.list_of_global_fragments     import ListOfGlobalFragments
 
@@ -28,6 +24,7 @@ from idtrackerai.gui.tracker_api import TrackerAPI
 from idtrackerai.gui.preprocessing_preview_api import PreprocessingPreviewAPI
 
 from .helpers import Chosen_Video
+
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +72,6 @@ class IdTrackerAiGUI(BaseWidget):
         self._player    = ControlPlayer('Player')
 
         self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt)
-        self._computebgbtn = ControlButton('Compute background', default=self.__compute_background_evt)
         self._chcksegm  = ControlCheckBox('Check segmentation')
         self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2, step=0.1)
         
@@ -98,7 +94,7 @@ class IdTrackerAiGUI(BaseWidget):
             ('Frames range', '_range'),
             ('Threshold', '_intensity'),
             ('Blobs area','_area'),
-            ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub', '_computebgbtn'),
+            ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
             ('_circlebtn','_rectbtn','_roi'),
             '_graph',
             ('_pre_processing', '_tracking', '_progress')
@@ -123,20 +119,25 @@ class IdTrackerAiGUI(BaseWidget):
         self._resreduct.value = 0.3
         self._area.value = [5, 50]
 
+        # store the computed background with the correct resolution reduction
+        self._background_img = None
+        # store the computed background with the original size
+        self._original_bkg = None
+
     #########################################################
     ## GUI EVENTS ###########################################
     #########################################################
 
     def __bgsub_changed_evt(self):
         if self._bgsub.value:
-            self._computebgbtn.show()
-        else:
-            self._computebgbtn.hide()
+            video = Video( video_path=self._video.value )
+            video.get_info()
+            video._subtract_bkg = True
+            video._original_bkg = cumpute_background(video)
+            self._original_bkg = video.original_bkg
+            video.resolution_reduction = self._resreduct.value
+            self._background_img = video.bkg
 
-    def __compute_background_evt(self):
-        # video      = cv2.VideoCapture(self._video.value)
-        # background = cumpute_background(video)
-        pass
 
     def __apply_roi_changed_evt(self):
         """
@@ -321,6 +322,7 @@ class IdTrackerAiGUI(BaseWidget):
         min_thresh, max_thresh = self._intensity.value
         min_area,   max_area   = self._area.value
 
+        original_size = frame.shape[1], frame.shape[0]
         reduction = self._resreduct.value
         frame = cv2.resize(frame, None, fx=reduction, fy=reduction, interpolation=cv2.INTER_AREA)
 
@@ -332,7 +334,7 @@ class IdTrackerAiGUI(BaseWidget):
         av_intensity = np.float32(np.mean(gray))
         av_frame     = gray / av_intensity
 
-        bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, None, mask, False)
+        bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, self._background_img, mask, self._bgsub.value)
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(bin_frame.copy(), frame, int(min_area), int(max_area))
         self._detected_areas = areas
         if self._nblobs.value<len(areas):
@@ -340,9 +342,12 @@ class IdTrackerAiGUI(BaseWidget):
 
         cv2.drawContours(frame, good_cnt, -1, color=(0,0,255), thickness=-1)
 
-        self.__draw_rois(frame)
-
         self._graph.draw()
+
+        # The resize to the original size is required because of the draw of the ROI.
+        frame = cv2.resize(frame, original_size, interpolation=cv2.INTER_AREA)
+
+        self.__draw_rois(frame)
         return frame
 
 
@@ -353,19 +358,25 @@ class IdTrackerAiGUI(BaseWidget):
         )
         video_object.get_info()
 
+        # define the thresholds ranges
         video_object._min_threshold = self._intensity.value[0]
         video_object._max_threshold = self._intensity.value[1]
 
+        # define the areas range
         video_object._min_area = self._area.value[0]
         video_object._max_area = self._area.value[1]
 
-        video_object._video_folder = os.path.dirname(self._video.value)
-        video_object._subtract_bkg = self._bgsub.value
+        # define the video range
+        video_object._tracking_interval = [self._range.value]
+
+        video_object._video_folder      = os.path.dirname(self._video.value)
+        video_object._subtract_bkg      = self._bgsub.value
+        video_object._original_bkg      = self._original_bkg
         video_object._number_of_animals = int(self._nblobs.value)
-        video_object._apply_ROI = self._applyroi.value
+        video_object._apply_ROI         = self._applyroi.value
+        video_object._original_ROI      = self.__create_mask(video_object.original_height, video_object.original_width)
 
         video_object.resolution_reduction = self._resreduct.value
-        video_object._ROI = self.__create_mask(video_object._original_height, video_object._original_width)
 
         video_object.create_session_folder(self._session.value)
 
