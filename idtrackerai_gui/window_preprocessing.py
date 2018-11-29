@@ -468,7 +468,9 @@ class IdTrackerAiGUI(BaseWidget):
         fragments_filepath  = os.path.join(video_folder, session_folder, 'preprocessing', 'fragments.npy')
         gfragments_filepath = os.path.join(video_folder, session_folder, 'preprocessing', 'global_fragments.npy')
 
-        video_object             = np.load(videoobj_filepath).item()
+        video_object = np.load(videoobj_filepath).item()
+        video_object.create_session_folder(self._session.value)
+
         list_of_fragments        = ListOfFragments.load(fragments_filepath)
         list_of_global_fragments = ListOfGlobalFragments.load(gfragments_filepath, list_of_fragments.fragments)
 
@@ -482,9 +484,7 @@ class IdTrackerAiGUI(BaseWidget):
 
         tracker = TrackerAPI( chosen_video )
 
-        tracker.init_tracking()
-        tracker.protocol1()
-        tracker.accumulate()
+        tracker.start_tracking()
         """
         print(video_object)
         print(list_of_fragments)
