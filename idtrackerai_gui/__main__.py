@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
     coloredlogs.install(
         level='DEBUG', 
-        fmt='[%(levelname)-8s]   %(name)-50s %(message)s',
+        fmt='[%(levelname)-8s] %(name)-40s %(message)s',
         #stream=open("idtrackerai-gui.log", 'w')
     )
     

@@ -74,7 +74,7 @@ class IdTrackerAiGUI(BaseWidget):
         self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt)
         self._chcksegm  = ControlCheckBox('Check segmentation')
         self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2, step=0.1)
-        
+
         self._intensity = ControlBoundingSlider('Intensity', default=[0,135], min=0, max=255, changed_event=self._player.refresh)
         self._area      = ControlBoundingSlider('Area',      default=[150,60000], min=0, max=60000)
         self._range     = ControlBoundingSlider(None,        default=[0,10], min=0, max=255)
@@ -84,8 +84,8 @@ class IdTrackerAiGUI(BaseWidget):
         self._graph     = ControlMatplotlib('Blobs area', toolbar=False, on_draw=self.__graph_on_draw_evt)
         self._progress  = ControlProgress('Progress')
 
-        self._pre_processing = ControlButton('Pre processing', default=self.step1_pre_processing)
-        self._tracking       = ControlButton('Start protocol cascade', default=self.step2_tracking)
+        self._pre_processing = ControlButton('Track video', default=self.track_video)
+        self._tracking       = ControlButton('Save parameters', default=self.save_parameters)
 
 
         self.formset = [
@@ -219,7 +219,7 @@ class IdTrackerAiGUI(BaseWidget):
         return mask
 
 
-    
+
 
     def select_point(self,x, y):
         try:
@@ -350,6 +350,12 @@ class IdTrackerAiGUI(BaseWidget):
         self.__draw_rois(frame)
         return frame
 
+    def track_video(self):
+        self.step1_pre_processing()
+        self.step2_tracking()
+
+    def save_parameters(self):
+        print('This will save the pre_processing parameters in order to run batch tracking')
 
     def step1_pre_processing(self):
 
@@ -448,16 +454,15 @@ class IdTrackerAiGUI(BaseWidget):
             })
 
             fig, ax_arr = plt.subplots(3)
-            fig.set_facecolor((.188, .188, .188))
+            # fig.set_facecolor((.188, .188, .188))
             fig.subplots_adjust(left=0.1, bottom=0.15, right=.9, top=.95, wspace=None, hspace=1)
-            fig.set_facecolor((.188, .188, .188))
-            [(ax.set_facecolor((.188, .188, .188)), ax.tick_params(color='white', labelcolor='white'), ax.xaxis.label.set_color('white'), ax.yaxis.label.set_color('white')) for ax in ax_arr]
-            [spine.set_edgecolor('white') for ax in ax_arr for spine in ax.spines.values()]
-            trainner.store_training_accuracy_and_loss_data.plot(ax_arr, color = 'r', plot_now = False, legend_font_color = "white")
-            trainner.store_validation_accuracy_and_loss_data.plot(ax_arr, color ='b', plot_now = False, legend_font_color = "white")
-            plt.show()
-
-
+            # fig.set_facecolor((.188, .188, .188))
+            # [(ax.set_facecolor((.188, .188, .188)), ax.tick_params(color='white', labelcolor='white'), ax.xaxis.label.set_color('white'), ax.yaxis.label.set_color('white')) for ax in ax_arr]
+            # [spine.set_edgecolor('white') for ax in ax_arr for spine in ax.spines.values()]
+            trainner.store_training_accuracy_and_loss_data.plot(ax_arr, color = 'r', plot_now = False)
+            trainner.store_validation_accuracy_and_loss_data.plot(ax_arr, color ='b', plot_now = False)
+            # plt.show()
+            fig.savefig(os.path.join(video_object.crossings_detector_folder, 'output_crossing_dectector.pdf'))
 
     def step2_tracking(self):
 
@@ -468,7 +473,9 @@ class IdTrackerAiGUI(BaseWidget):
         fragments_filepath  = os.path.join(video_folder, session_folder, 'preprocessing', 'fragments.npy')
         gfragments_filepath = os.path.join(video_folder, session_folder, 'preprocessing', 'global_fragments.npy')
 
-        video_object             = np.load(videoobj_filepath).item()
+        video_object = np.load(videoobj_filepath).item()
+        video_object.create_session_folder(self._session.value)
+
         list_of_fragments        = ListOfFragments.load(fragments_filepath)
         list_of_global_fragments = ListOfGlobalFragments.load(gfragments_filepath, list_of_fragments.fragments)
 
@@ -482,9 +489,7 @@ class IdTrackerAiGUI(BaseWidget):
 
         tracker = TrackerAPI( chosen_video )
 
-        tracker.init_tracking()
-        tracker.protocol1()
-        tracker.accumulate()
+        tracker.start_tracking()
         """
         print(video_object)
         print(list_of_fragments)
