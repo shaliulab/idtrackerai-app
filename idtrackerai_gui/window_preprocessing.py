@@ -85,8 +85,9 @@ class IdTrackerAiGUI(BaseWidget):
         self._graph     = ControlMatplotlib('Blobs area', toolbar=False, on_draw=self.__graph_on_draw_evt, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
 
-        self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
-        self._tracking       = ControlButton('Save parameters', default=self.save_parameters, enabled=False)
+        if conf.PYFORMS_MODE=='GUI':
+            self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
+            self._savebtn        = ControlButton('Save parameters', default=self.save_window, enabled=False)
 
 
         self.formset = [
@@ -99,7 +100,7 @@ class IdTrackerAiGUI(BaseWidget):
             ('_circlebtn','_rectbtn','_roi'),
             '=',
             '_graph',
-            ('_pre_processing', '_tracking', '_progress')
+            ('_pre_processing', '_savebtn', '_progress')
         ]
 
         self._player.drag_event          = self.on_player_drag_in_video_window
@@ -196,22 +197,22 @@ class IdTrackerAiGUI(BaseWidget):
 
 
     def __set_enabled(self, status):
-        self._applyroi.enabled = True
-        self._roi.enabled = True
-        self._player.enabled = True
-        self._bgsub.enabled = True
-        self._chcksegm.enabled = True
-        self._resreduct.enabled = True
-        self._intensity.enabled = True
-        self._area.enabled = True
-        self._range.enabled = True
-        self._circlebtn.enabled = True
-        self._rectbtn.enabled = True
-        self._nblobs.enabled = True
-        self._graph.enabled = True
-        self._progress.enabled = True
-        self._pre_processing.enabled = True
-        self._tracking.enabled = True
+        self._applyroi.enabled = status
+        self._roi.enabled = status
+        self._player.enabled = status
+        self._bgsub.enabled = status
+        self._chcksegm.enabled = status
+        self._resreduct.enabled = status
+        self._intensity.enabled = status
+        self._area.enabled = status
+        self._range.enabled = status
+        self._circlebtn.enabled = status
+        self._rectbtn.enabled = status
+        self._nblobs.enabled = status
+        self._graph.enabled = status
+        self._progress.enabled = status
+        self._pre_processing.enabled = status
+        self._savebtn.enabled = status
 
     def __draw_rois(self, frame):
         """
@@ -390,8 +391,7 @@ class IdTrackerAiGUI(BaseWidget):
         self.step1_pre_processing()
         self.step2_tracking()
 
-    def save_parameters(self):
-        print('This will save the pre_processing parameters in order to run batch tracking')
+
 
     def step1_pre_processing(self):
 
