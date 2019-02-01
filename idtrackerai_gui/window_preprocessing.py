@@ -1,4 +1,7 @@
 import numpy as np, cv2, math, os, logging
+from confapp import conf
+
+logger = logging.getLogger(__name__)
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
@@ -25,12 +28,11 @@ from idtrackerai.gui.preprocessing_preview_api import PreprocessingPreviewAPI
 
 from .helpers import Chosen_Video
 
-
-logger = logging.getLogger(__name__)
-
 import tensorflow as tf
 with tf.Session() as sess:
     logger.info( "TENSORFLOW DEVICES: "+str(sess.list_devices()) )
+
+
 
 def points_distance(p1, p2):
     return  math.hypot(p2[0]-p1[0], p2[1]-p1[1])
@@ -63,7 +65,6 @@ class IdTrackerAiGUI(BaseWidget):
         super().__init__(title='idtracker.ai')
 
         self.set_margin(10)
-        self.setMinimumHeight(800)
 
         self._session   = ControlText('Session', default='session0')
         self._video     = ControlFile('File', changed_event=self.__video_changed_evt)
@@ -96,6 +97,7 @@ class IdTrackerAiGUI(BaseWidget):
             ('Blobs area','_area'),
             ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
             ('_circlebtn','_rectbtn','_roi'),
+            '=',
             '_graph',
             ('_pre_processing', '_tracking', '_progress')
         ]
@@ -110,14 +112,17 @@ class IdTrackerAiGUI(BaseWidget):
         self._start_point    = None
         self._end_point      = None
 
-        self._graph.form.setMaximumHeight(250)
-        self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
+        if conf.PYFORMS_MODE=='GUI':
+            self.setMinimumHeight(800)
+            self._player.setMinimumHeight(300)
+
+        #self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
 
         self.__apply_roi_changed_evt()
         self.__bgsub_changed_evt()
 
-        self._resreduct.value = 0.3
-        self._area.value = [5, 50]
+        #self._resreduct.value = 0.3
+        #self._area.value = [5, 50]
 
         # store the computed background with the correct resolution reduction
         self._background_img = None
