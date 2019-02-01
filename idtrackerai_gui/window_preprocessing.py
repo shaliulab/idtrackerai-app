@@ -68,25 +68,25 @@ class IdTrackerAiGUI(BaseWidget):
 
         self._session   = ControlText('Session', default='session0')
         self._video     = ControlFile('File', changed_event=self.__video_changed_evt)
-        self._applyroi  = ControlCheckBox('Apply ROI?', changed_event=self.__apply_roi_changed_evt)
-        self._roi       = ControlText('ROI')
-        self._player    = ControlPlayer('Player')
+        self._applyroi  = ControlCheckBox('Apply ROI?', changed_event=self.__apply_roi_changed_evt, enabled=False)
+        self._roi       = ControlText('ROI', enabled=False)
+        self._player    = ControlPlayer('Player', enabled=False)
 
-        self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt)
-        self._chcksegm  = ControlCheckBox('Check segmentation')
-        self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2, step=0.1)
+        self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt, enabled=False)
+        self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
+        self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2, step=0.1, enabled=False)
 
-        self._intensity = ControlBoundingSlider('Intensity', default=[0,135], min=0, max=255, changed_event=self._player.refresh)
-        self._area      = ControlBoundingSlider('Area',      default=[150,60000], min=0, max=60000)
-        self._range     = ControlBoundingSlider(None,        default=[0,10], min=0, max=255)
-        self._circlebtn = ControlButton('Circle',    checkable=True)
-        self._rectbtn   = ControlButton('Rectangle', checkable=True)
-        self._nblobs    = ControlNumber('N blobs', default=8)
-        self._graph     = ControlMatplotlib('Blobs area', toolbar=False, on_draw=self.__graph_on_draw_evt)
-        self._progress  = ControlProgress('Progress')
+        self._intensity = ControlBoundingSlider('Intensity', default=[0,135], min=0, max=255, changed_event=self._player.refresh, enabled=False)
+        self._area      = ControlBoundingSlider('Area',      default=[150,60000], min=0, max=60000, enabled=False)
+        self._range     = ControlBoundingSlider(None,        default=[0,10], min=0, max=255, enabled=False)
+        self._circlebtn = ControlButton('Circle',    checkable=True, enabled=False)
+        self._rectbtn   = ControlButton('Rectangle', checkable=True, enabled=False)
+        self._nblobs    = ControlNumber('N blobs', default=8, enabled=False)
+        self._graph     = ControlMatplotlib('Blobs area', toolbar=False, on_draw=self.__graph_on_draw_evt, enabled=False)
+        self._progress  = ControlProgress('Progress', enabled=False)
 
-        self._pre_processing = ControlButton('Track video', default=self.track_video)
-        self._tracking       = ControlButton('Save parameters', default=self.save_parameters)
+        self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
+        self._tracking       = ControlButton('Save parameters', default=self.save_parameters, enabled=False)
 
 
         self.formset = [
@@ -134,14 +134,18 @@ class IdTrackerAiGUI(BaseWidget):
     #########################################################
 
     def __bgsub_changed_evt(self):
+
         if self._bgsub.value:
-            video = Video( video_path=self._video.value )
-            video.get_info()
-            video._subtract_bkg = True
-            video._original_bkg = cumpute_background(video)
-            self._original_bkg = video.original_bkg
-            video.resolution_reduction = self._resreduct.value
-            self._background_img = video.bkg
+            if self._player.value:
+                video = Video( video_path=self._video.value )
+                video.get_info()
+                video._subtract_bkg = True
+                video._original_bkg = cumpute_background(video)
+                self._original_bkg = video.original_bkg
+                video.resolution_reduction = self._resreduct.value
+                self._background_img = video.bkg
+            else:
+                self._bgsub.value = False
 
 
     def __apply_roi_changed_evt(self):
@@ -177,10 +181,37 @@ class IdTrackerAiGUI(BaseWidget):
         Function called when the video file is selected.
         Ask to the player to load the video file.
         """
-        self._player.value = self._video.value
-        self._range.max    = self._player.max
-        self._range.value  = [0, self._player.max]
+        if self._video.value:
+            self._player.value = self._video.value
+            if self._player.value:
+                self._range.max    = self._player.max
+                self._range.value  = [0, self._player.max]
+                self.__set_enabled(True)
 
+            else:
+                self.__set_enabled(False)
+
+        else:
+            self.__set_enabled(False)
+
+
+    def __set_enabled(self, status):
+        self._applyroi.enabled = True
+        self._roi.enabled = True
+        self._player.enabled = True
+        self._bgsub.enabled = True
+        self._chcksegm.enabled = True
+        self._resreduct.enabled = True
+        self._intensity.enabled = True
+        self._area.enabled = True
+        self._range.enabled = True
+        self._circlebtn.enabled = True
+        self._rectbtn.enabled = True
+        self._nblobs.enabled = True
+        self._graph.enabled = True
+        self._progress.enabled = True
+        self._pre_processing.enabled = True
+        self._tracking.enabled = True
 
     def __draw_rois(self, frame):
         """
