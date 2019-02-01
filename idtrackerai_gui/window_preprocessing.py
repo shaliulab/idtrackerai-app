@@ -476,7 +476,7 @@ class IdTrackerAiGUI(BaseWidget):
         list_of_fragments = pre.list_of_fragments
         list_of_global_fragments = pre.list_of_global_fragments
 
-        if trainner:
+        if chosen_video.video.there_are_crossings:
 
             import matplotlib
             import matplotlib.pyplot as plt
@@ -512,8 +512,12 @@ class IdTrackerAiGUI(BaseWidget):
         video_object = np.load(videoobj_filepath).item()
         video_object.create_session_folder(self._session.value)
 
-        list_of_fragments        = ListOfFragments.load(fragments_filepath)
-        list_of_global_fragments = ListOfGlobalFragments.load(gfragments_filepath, list_of_fragments.fragments)
+        if video_object.number_of_animals != 1:
+            list_of_fragments        = ListOfFragments.load(fragments_filepath)
+            list_of_global_fragments = ListOfGlobalFragments.load(gfragments_filepath, list_of_fragments.fragments)
+        else:
+            list_of_fragments        = None
+            list_of_global_fragments = None
 
         chosen_video = Chosen_Video(
             video=video_object,
