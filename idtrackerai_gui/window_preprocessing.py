@@ -103,6 +103,13 @@ class IdTrackerAiGUI(BaseWidget):
             ('_pre_processing', '_savebtn', '_progress')
         ]
 
+        self.load_order = [
+            '_session', '_video', '_range',
+            '_intensity', '_area', '_nblobs',
+            '_resreduct', '_chcksegm', '_roi',
+            '_bgsub'
+        ]
+
         self._player.drag_event          = self.on_player_drag_in_video_window
         self._player.end_drag_event      = self.on_player_end_drag_in_video_window
         self._player.click_event         = self.on_player_click_in_video_window
@@ -211,8 +218,10 @@ class IdTrackerAiGUI(BaseWidget):
         self._nblobs.enabled = status
         self._graph.enabled = status
         self._progress.enabled = status
-        self._pre_processing.enabled = status
-        self._savebtn.enabled = status
+
+        if conf.PYFORMS_MODE == 'GUI':
+            self._pre_processing.enabled = status
+            self._savebtn.enabled = status
 
     def __draw_rois(self, frame):
         """
@@ -371,6 +380,8 @@ class IdTrackerAiGUI(BaseWidget):
         av_intensity = np.float32(np.mean(gray))
         av_frame     = gray / av_intensity
 
+
+
         bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, self._background_img, mask, self._bgsub.value)
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(bin_frame.copy(), frame, int(min_area), int(max_area))
         self._detected_areas = areas
@@ -379,7 +390,8 @@ class IdTrackerAiGUI(BaseWidget):
 
         cv2.drawContours(frame, good_cnt, -1, color=(0,0,255), thickness=-1)
 
-        self._graph.draw()
+        if conf.PYFORMS_MODE == 'GUI':
+            self._graph.draw()
 
         # The resize to the original size is required because of the draw of the ROI.
         frame = cv2.resize(frame, original_size, interpolation=cv2.INTER_AREA)
