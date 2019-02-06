@@ -400,8 +400,17 @@ class IdTrackerAiGUI(BaseWidget):
         return frame
 
     def track_video(self):
+
+        self._video.enabled=False
+        self._session.enabled=False
+        self.__set_enabled(False)
+
         self.step1_pre_processing()
         self.step2_tracking()
+
+        self._video.enabled=True
+        self._session.enabled=True
+        self.__set_enabled(True)
 
 
 
