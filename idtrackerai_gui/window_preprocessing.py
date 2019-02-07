@@ -7,6 +7,7 @@ from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
 from pyforms.controls import ControlCheckBox
 from pyforms.controls import ControlFile
+from pyforms.controls import ControlList
 from pyforms.controls import ControlPlayer
 from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlButton
@@ -26,6 +27,8 @@ from idtrackerai.video import Video
 from idtrackerai.gui.tracker_api import TrackerAPI
 from idtrackerai.gui.preprocessing_preview_api import PreprocessingPreviewAPI
 
+from .gui.roi_selection import ROISelectionWin
+
 from .helpers import Chosen_Video
 
 import tensorflow as tf
@@ -34,43 +37,27 @@ with tf.Session() as sess:
 
 
 
-def points_distance(p1, p2):
-    return  math.hypot(p2[0]-p1[0], p2[1]-p1[1])
-
-def create_rectangle_points(start, end):
-    return [ start, (end[0],start[1]), end, (start[0],end[1]) ]
-
-def create_ellipse_points( start, end ):
-    width = end[0]-start[0]
-    height = end[1]-start[1]
-    center = ( start[0] + width/2, start[1] + height/2 )
-
-    distance = points_distance(start, end )
-    nPoints = distance / 30
-    if nPoints<8:nPoints = 8.0
-
-    points = []
-    for angleR in np.arange(0, math.pi*2, math.pi/nPoints):
-        x = int(round(center[0] + width/2 * np.cos(angleR) ))
-        y = int(round(center[1] + height/2 * np.sin(angleR)))
-        points.append( ( x,y) )
-    return points
 
 
-
-class IdTrackerAiGUI(BaseWidget):
+class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
 
 
     def __init__(self, *args, **kwargs):
-        super().__init__(title='idtracker.ai')
+        BaseWidget.__init__(self, title='idtracker.ai')
+        ROISelectionWin.__init__(self)
 
         self.set_margin(10)
 
         self._session   = ControlText('Session', default='session0')
         self._video     = ControlFile('File', changed_event=self.__video_changed_evt)
         self._applyroi  = ControlCheckBox('Apply ROI?', changed_event=self.__apply_roi_changed_evt, enabled=False)
-        self._roi       = ControlText('ROI', enabled=False)
         self._player    = ControlPlayer('Player', enabled=False)
+
+        self._roi       = ControlList('ROI', enabled=False, readonly=True, select_entire_row=True,
+                                      item_selection_changed_event=self.roi_selection_changed_evt,
+                                      remove_function=self.remove_roi)
+        self._polybtn   = ControlButton('Polygon', checkable=True, enabled=False, default=self.polybtn_click_evt)
+        self._rectbtn   = ControlButton('Rectangle', checkable=True, enabled=False)
 
         self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt, enabled=False)
         self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
@@ -79,8 +66,6 @@ class IdTrackerAiGUI(BaseWidget):
         self._intensity = ControlBoundingSlider('Intensity', default=[0,135], min=0, max=255, changed_event=self._player.refresh, enabled=False)
         self._area      = ControlBoundingSlider('Area',      default=[150,60000], min=0, max=60000, enabled=False)
         self._range     = ControlBoundingSlider(None,        default=[0,10], min=0, max=255, enabled=False)
-        self._circlebtn = ControlButton('Circle',    checkable=True, enabled=False)
-        self._rectbtn   = ControlButton('Rectangle', checkable=True, enabled=False)
         self._nblobs    = ControlNumber('N blobs', default=8, enabled=False)
         self._graph     = ControlMatplotlib('Blobs area', toolbar=False, on_draw=self.__graph_on_draw_evt, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
@@ -97,7 +82,8 @@ class IdTrackerAiGUI(BaseWidget):
             ('Threshold', '_intensity'),
             ('Blobs area','_area'),
             ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
-            ('_circlebtn','_rectbtn','_roi'),
+            ('_polybtn','_rectbtn', ' '),
+            '_roi',
             '=',
             '_graph',
             ('_pre_processing', '_savebtn', '_progress')
@@ -116,15 +102,12 @@ class IdTrackerAiGUI(BaseWidget):
         self._player.double_click_event  = self.on_player_double_click_in_video_window
         self._player.process_frame_event = self.process_frame_evt
 
-        self._selected_point = None
-        self._start_point    = None
-        self._end_point      = None
 
         if conf.PYFORMS_MODE=='GUI':
             self.setMinimumHeight(800)
             self._player.setMinimumHeight(300)
 
-        #self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
+        self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
 
         self.__apply_roi_changed_evt()
         self.__bgsub_changed_evt()
@@ -162,11 +145,11 @@ class IdTrackerAiGUI(BaseWidget):
         """
         if self._applyroi.value:
             self._roi.show()
-            self._circlebtn.show()
+            self._polybtn.show()
             self._rectbtn.show()
         else:
             self._roi.hide()
-            self._circlebtn.hide()
+            self._polybtn.hide()
             self._rectbtn.hide()
 
 
@@ -213,7 +196,7 @@ class IdTrackerAiGUI(BaseWidget):
         self._intensity.enabled = status
         self._area.enabled = status
         self._range.enabled = status
-        self._circlebtn.enabled = status
+        self._polybtn.enabled = status
         self._rectbtn.enabled = status
         self._nblobs.enabled = status
         self._graph.enabled = status
@@ -223,141 +206,14 @@ class IdTrackerAiGUI(BaseWidget):
             self._pre_processing.enabled = status
             self._savebtn.enabled = status
 
-    def __draw_rois(self, frame):
-        """
-        Draw the ROIs lines in the frame.
-        """
-        points = self._roi.value
-        try:
-            points = eval( self._roi.value )
-            cv2.polylines(frame, [np.array(points,np.int32)], True, (0,255,0), 2, lineType=cv2.LINE_AA)
-            for i, point in enumerate( points ):
-                if self._selected_point == i:
-                    cv2.circle(frame, point, 4, (0,0,255), 2)
-                else:
-                    cv2.circle(frame, point, 4, (0,255,0), 2)
-        except:
-            pass
-
-        if self._start_point and self._end_point:
-            if self._rectbtn.checked:
-                cv2.rectangle(frame, self._start_point, self._end_point, (233,44,44), 1 )
-            elif self._circlebtn.checked and self._end_point[0]>self._start_point[0] and self._end_point[1]>self._start_point[1]:
-                width = self._end_point[0]-self._start_point[0]
-                height = self._end_point[1]-self._start_point[1]
-                center = ( self._start_point[0] + width/2, self._start_point[1] + height/2 )
-                cv2.ellipse( frame, (center, (width,height), 0), (233,44,44), 1 )
-
-        return frame
-
-    def __create_mask(self, height, width):
-        """
-        Create a mask based on the selected ROIs
-        """
-        points = self._roi.value
-        mask   = np.zeros( (height, width) , dtype=np.uint8)
-        if points:
-            points = eval( self._roi.value )
-            mask   = cv2.fillPoly(mask, [np.array(points,np.int32)], (255,255,255))
-        else:
-            mask = mask + 255
-
-        return mask
 
 
 
 
-    def select_point(self,x, y):
-        try:
-            coord  = ( x, y )
-            points = eval(self._roi.value)
-            for i, point in enumerate( points):
-                if points_distance( coord, point ) <= 5:
-                    self._selected_point = i
-                    return
-            self._selected_point = None
-        except:
-            pass
-
-    def get_intersection_point_distance(self, test_point, point1, point2):
-        p1 = np.float32(point1)
-        p2 = np.float32(point2)
-        p3 = np.float32(test_point)
-        dist = np.linalg.norm(np.cross(p2-p1, p1-p3))/np.linalg.norm(p2-p1)
-        return dist
-
-    def on_player_double_click_in_video_window(self, event, x, y):
-        mouse = ( int(x), int(y) )
-        distances = []
-
-        try:
-            points   = list(eval(self._roi.value))
-            n_points = len(points)
-            for point_index, point in enumerate( points ):
-                next_point = points[ (point_index+1) % n_points ]
-                distance = self.get_intersection_point_distance(mouse, point, next_point )
-
-                if distance<=5:
-                    vector = next_point[0]-point[0], next_point[1]-point[1]
-                    center = point[0]+vector[0]/2,point[1]+vector[1]/2
-                    radius = points_distance(center, point)
-                    mouse_distance = points_distance(center, mouse)
-                    if mouse_distance<radius:
-                        distances.append( (distance, point_index) )
-        except:
-            pass
-
-        if len(distances)>0:
-            distances = sorted(distances, key=lambda x: x[0])
-            point_index = distances[0][1]
-            points.insert( point_index + 1, mouse )
-
-            self._roi.value = str(points)[1:-1]
-
-            self._selected_point = point_index + 1
-
-            if not self._player.is_playing: self._player.refresh()
 
 
-    def on_player_click_in_video_window(self, event, x, y):
-        self._selected_point = None
-
-        if not self._rectbtn.checked and not self._circlebtn.checked:
-            self.select_point( int(x), int(y) )
 
 
-    def on_player_drag_in_video_window(self, start_point, end_point):
-        self._start_point = ( int(start_point[0]), int(start_point[1]) )
-        self._end_point   = ( int(end_point[0]), int(end_point[1]) )
-
-        if self._selected_point!=None:
-            try:
-                points = list(eval(self._roi.value))
-                points[self._selected_point] = self._end_point
-                self._roi.value = str(points)[1:-1]
-            except Exception as e:
-                print(e)
-
-        if not self._player.is_playing: self._player.refresh()
-
-    def on_player_end_drag_in_video_window(self, start_point, end_point):
-        self._start_point = int(start_point[0]), int(start_point[1])
-        self._end_point   = int(end_point[0]),   int(end_point[1])
-
-        points = None
-        if self._rectbtn.checked:
-            points = create_rectangle_points(self._start_point, self._end_point)
-        elif self._circlebtn.checked and self._end_point[0]>self._start_point[0] and self._end_point[1]>self._start_point[1]:
-            points = create_ellipse_points(self._start_point, self._end_point)
-
-        if points: self._roi.value = str(points)[1:-1]
-
-        self._start_point    = None
-        self._end_point      = None
-        self._rectbtn.checked   = False
-        self._circlebtn.checked = False
-
-        if not self._player.is_playing: self._player.refresh()
 
 
     def process_frame_evt(self, frame):
@@ -375,7 +231,7 @@ class IdTrackerAiGUI(BaseWidget):
 
         # Convert the frame to black & white
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) if len(frame.shape)>2 else frame
-        mask = self.__create_mask(*gray.shape)
+        mask = self.create_mask(*gray.shape)
 
         av_intensity = np.float32(np.mean(gray))
         av_frame     = gray / av_intensity
@@ -396,7 +252,7 @@ class IdTrackerAiGUI(BaseWidget):
         # The resize to the original size is required because of the draw of the ROI.
         frame = cv2.resize(frame, original_size, interpolation=cv2.INTER_AREA)
 
-        self.__draw_rois(frame)
+        self.draw_rois(frame)
         return frame
 
     def track_video(self):
@@ -437,7 +293,7 @@ class IdTrackerAiGUI(BaseWidget):
         video_object._original_bkg      = self._original_bkg
         video_object._number_of_animals = int(self._nblobs.value)
         video_object._apply_ROI         = self._applyroi.value
-        video_object._original_ROI      = self.__create_mask(video_object.original_height, video_object.original_width)
+        video_object._original_ROI      = self.create_mask(video_object.original_height, video_object.original_width)
 
         video_object.resolution_reduction = self._resreduct.value
 
