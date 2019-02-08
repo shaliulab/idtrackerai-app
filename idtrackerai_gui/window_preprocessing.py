@@ -104,7 +104,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
 
 
         if conf.PYFORMS_MODE=='GUI':
-            self.setMinimumHeight(800)
+            self.setMinimumHeight(900)
             self._player.setMinimumHeight(300)
 
         self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
