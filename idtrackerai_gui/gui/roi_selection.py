@@ -40,6 +40,11 @@ class ROISelectionWin(object):
         self._start_point = None # square starting point
         self._end_point = None # square ending point
 
+    def circlebtn_click_evt(self):
+        if self._circlebtn.checked:
+            self._roi += ['[]']
+            self._roi.selected_row_index = len(self._roi)-1
+            self._circlebtn.checked = True
 
     def polybtn_click_evt(self):
         if self._polybtn.checked:
@@ -72,6 +77,7 @@ class ROISelectionWin(object):
         Function called when the selected polygon change
         """
         self._polybtn.checked = False
+        self._circlebtn.checked = False
 
     def remove_roi(self):
         self._roi -= -1
@@ -191,15 +197,25 @@ class ROISelectionWin(object):
         mouse = int(x), int(y)
         self._selected_point = None
 
-        if not self._rectbtn.checked and not self._polybtn.checked:
+        if not self._rectbtn.checked and not self._polybtn.checked and not self._circlebtn.checked:
             self.select_point( *mouse )
 
-        if self._polybtn.checked:
+        if self._polybtn.checked or self._circlebtn.checked:
             index = self._roi.selected_row_index
             if index is not None:
                 points = list(eval(self._roi.value[index][0]))
                 points.append( mouse )
-                self._roi.set_value(0, index, str(points)[1:-1]+',')
+                if len(points)>=5 and self._circlebtn.checked:
+                    poly = cv2.fitEllipse(np.array(points,np.int32))
+                    center, axis, angle = cv2.fitEllipse(np.array(points,np.int32))
+                    center = int(round(center[0])), int(round(center[1]))
+                    axis   = int(round(axis[0]/2.0)), int(round(axis[1]/2.0))
+                    angle  = int(round(angle))
+                    points = cv2.ellipse2Poly(center, axis, angle, 0, 360, 5)
+                    self._roi.set_value(0, index, str(points.tolist())[1:-1] + ',')
+                    self._circlebtn.checked=False
+                else:
+                    self._roi.set_value(0, index, str(points)[1:-1]+',')
 
     def on_player_drag_in_video_window(self, start_point, end_point):
         """

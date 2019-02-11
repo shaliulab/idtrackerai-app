@@ -58,6 +58,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
                                       remove_function=self.remove_roi)
         self._polybtn   = ControlButton('Polygon', checkable=True, enabled=False, default=self.polybtn_click_evt)
         self._rectbtn   = ControlButton('Rectangle', checkable=True, enabled=False)
+        self._circlebtn = ControlButton('Ellipse', checkable=True, enabled=False, default=self.circlebtn_click_evt)
 
         self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt, enabled=False)
         self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
@@ -82,7 +83,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
             ('Threshold', '_intensity'),
             ('Blobs area','_area'),
             ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
-            ('_polybtn','_rectbtn', ' '),
+            ('_polybtn','_rectbtn', '_circlebtn', ' '),
             '_roi',
             '=',
             '_graph',
@@ -147,10 +148,12 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
             self._roi.show()
             self._polybtn.show()
             self._rectbtn.show()
+            self._circlebtn.show()
         else:
             self._roi.hide()
             self._polybtn.hide()
             self._rectbtn.hide()
+            self._circlebtn.hide()
 
 
     def __graph_on_draw_evt(self, figure):
@@ -198,6 +201,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._range.enabled = status
         self._polybtn.enabled = status
         self._rectbtn.enabled = status
+        self._circlebtn.enabled = status
         self._nblobs.enabled = status
         self._graph.enabled = status
         self._progress.enabled = status
