@@ -55,9 +55,14 @@ class ROISelectionWin(object):
 
         if len(self._roi)>0:
             for row in self._roi.value:
-                points = eval( row[0] )
+                if isinstance(row, str):
+                    points = eval( row )
+                elif isinstance(row[0], str):
+                    points = eval(row[0])
+                else:
+                    points = row
                 if len(points)<3: continue
-                mask   = cv2.fillPoly(mask, [np.array(points,np.int32)], (255,255,255))
+                mask = cv2.fillPoly(mask, [np.array(points,np.int32)], (255,255,255))
         else:
             mask = mask + 255
         return mask
