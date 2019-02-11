@@ -11,7 +11,6 @@ from pyforms.controls import ControlList
 from pyforms.controls import ControlPlayer
 from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlButton
-from pyforms.controls import ControlMatplotlib
 from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
@@ -28,6 +27,7 @@ from idtrackerai.gui.tracker_api import TrackerAPI
 from idtrackerai.gui.preprocessing_preview_api import PreprocessingPreviewAPI
 
 from .gui.roi_selection import ROISelectionWin
+from .gui.grapharea_win import GraphAreaWin
 
 from .helpers import Chosen_Video
 
@@ -68,8 +68,10 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._area      = ControlBoundingSlider('Area',      default=[150,60000], min=0, max=60000, enabled=False)
         self._range     = ControlBoundingSlider(None,        default=[0,10], min=0, max=255, enabled=False)
         self._nblobs    = ControlNumber('N blobs', default=8, enabled=False)
-        self._graph     = ControlMatplotlib('Blobs area', toolbar=False, on_draw=self.__graph_on_draw_evt, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
+
+        self._togglegraph = ControlCheckBox('Graph', changed_event=self.__toggle_graph_evt)
+        self._graph = GraphAreaWin(parent_win=self)
 
         if conf.PYFORMS_MODE=='GUI':
             self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
@@ -81,12 +83,10 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
             '_player',
             ('Frames range', '_range'),
             ('Threshold', '_intensity'),
-            ('Blobs area','_area'),
+            ('Blobs area','_area', '_togglegraph'),
             ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
             ('_polybtn','_rectbtn', '_circlebtn', ' '),
             '_roi',
-            '=',
-            '_graph',
             ('_pre_processing', '_savebtn', '_progress')
         ]
 
@@ -97,6 +97,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
             '_bgsub'
         ]
 
+        self._graph.on_draw              = self.__graph_on_draw_evt
         self._player.drag_event          = self.on_player_drag_in_video_window
         self._player.end_drag_event      = self.on_player_end_drag_in_video_window
         self._player.click_event         = self.on_player_click_in_video_window
@@ -107,6 +108,9 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         if conf.PYFORMS_MODE=='GUI':
             self.setMinimumHeight(900)
             self._player.setMinimumHeight(300)
+            self._togglegraph.form.setMaximumWidth(70)
+            self._roi.setMaximumHeight(100)
+            self._session.form.setMaximumWidth(250)
 
         self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
 
@@ -124,6 +128,12 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
     #########################################################
     ## GUI EVENTS ###########################################
     #########################################################
+
+    def __toggle_graph_evt(self):
+        if self._togglegraph.value:
+            self._graph.show()
+        else:
+            self._graph.hide()
 
     def __bgsub_changed_evt(self):
 
