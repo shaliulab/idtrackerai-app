@@ -28,6 +28,7 @@ from idtrackerai.gui.preprocessing_preview_api import PreprocessingPreviewAPI
 
 from .gui.roi_selection import ROISelectionWin
 from .gui.grapharea_win import GraphAreaWin
+from .gui.range_win import RangeWin
 
 from .helpers import Chosen_Video
 
@@ -51,7 +52,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._session   = ControlText('Session', default='session0')
         self._video     = ControlFile('File', changed_event=self.__video_changed_evt)
         self._applyroi  = ControlCheckBox('Apply ROI?', changed_event=self.__apply_roi_changed_evt, enabled=False)
-        self._player    = ControlPlayer('Player', enabled=False)
+        self._player    = ControlPlayer('Player', enabled=False, multiple_files=True)
 
         self._roi       = ControlList('ROI', enabled=False, readonly=True, select_entire_row=True,
                                       item_selection_changed_event=self.roi_selection_changed_evt,
@@ -64,11 +65,15 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
         self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2, step=0.1, enabled=False)
 
-        self._intensity = ControlBoundingSlider('Intensity', default=[0,135], min=0, max=255, changed_event=self._player.refresh, enabled=False)
-        self._area      = ControlBoundingSlider('Area',      default=[150,60000], min=0, max=60000, enabled=False)
-        self._range     = ControlBoundingSlider(None,        default=[0,10], min=0, max=255, enabled=False)
+        self._intensity = ControlBoundingSlider('Threshold', default=[0,135], min=0, max=255, changed_event=self._player.refresh, enabled=False)
+        self._area      = ControlBoundingSlider('Blobs area', default=[150,60000], min=0, max=60000, enabled=False)
+        self._range     = ControlBoundingSlider('Frames range', default=[0,10], min=0, max=255, enabled=False)
         self._nblobs    = ControlNumber('N blobs', default=8, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
+
+        self._addrange  = ControlButton('Add range', default=self.__rangelst_add_evt)
+        self._rangelst  = ControlText( 'Frames ranges', visible=False )
+        self._multiple_range = ControlCheckBox('Multiple ranges', enabled=False, changed_event=self.__multiple_range_changed_evt)
 
         self._togglegraph = ControlCheckBox('Graph', changed_event=self.__toggle_graph_evt)
         self._graph = GraphAreaWin(parent_win=self)
@@ -81,9 +86,10 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self.formset = [
             ('_video','_session'),
             '_player',
-            ('Frames range', '_range'),
-            ('Threshold', '_intensity'),
-            ('Blobs area','_area', '_togglegraph'),
+            '=',
+            ('_range','_rangelst','_addrange','_multiple_range'),
+            '_intensity',
+            ('_area', '_togglegraph'),
             ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
             ('_polybtn','_rectbtn', '_circlebtn', ' '),
             '_roi',
@@ -91,7 +97,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         ]
 
         self.load_order = [
-            '_session', '_video', '_range',
+            '_session', '_video', '_range','_rangelst', '_multiple_range',
             '_intensity', '_area', '_nblobs',
             '_resreduct', '_chcksegm', '_roi',
             '_bgsub'
@@ -111,8 +117,9 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
             self._togglegraph.form.setMaximumWidth(70)
             self._roi.setMaximumHeight(100)
             self._session.form.setMaximumWidth(250)
+            self._multiple_range.form.setMaximumWidth(130)
 
-        self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
+        self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example_01.avi'
 
         self.__apply_roi_changed_evt()
         self.__bgsub_changed_evt()
@@ -128,6 +135,26 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
     #########################################################
     ## GUI EVENTS ###########################################
     #########################################################
+
+    def __rangelst_add_evt(self):
+        win = RangeWin(
+            parent_win=self,
+            maximum=self._player.max,
+            begin=self._player.video_index,
+            control_list=self._rangelst
+        )
+        win.show()
+
+
+    def __multiple_range_changed_evt(self):
+        if self._multiple_range.value:
+            self._range.hide()
+            self._addrange.show()
+            self._rangelst.show()
+        else:
+            self._range.show()
+            self._addrange.hide()
+            self._rangelst.hide()
 
     def __toggle_graph_evt(self):
         if self._togglegraph.value:
@@ -215,6 +242,9 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._nblobs.enabled = status
         self._graph.enabled = status
         self._progress.enabled = status
+        self._multiple_range.enabled = status
+        self._rangelst.enabled = status
+        self._addrange.enabled = status
 
         if conf.PYFORMS_MODE == 'GUI':
             self._pre_processing.enabled = status
@@ -260,7 +290,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
 
         cv2.drawContours(frame, good_cnt, -1, color=(0,0,255), thickness=-1)
 
-        if conf.PYFORMS_MODE == 'GUI':
+        if conf.PYFORMS_MODE == 'GUI' and self._togglegraph.value:
             self._graph.draw()
 
         # The resize to the original size is required because of the draw of the ROI.
@@ -300,7 +330,14 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         video_object._max_area = self._area.value[1]
 
         # define the video range
-        video_object._tracking_interval = [self._range.value]
+        if self._multiple_range.value and self._rangelst.value:
+            try:
+                video_object._tracking_interval = eval(self._rangelst.value)
+            except Exception as e:
+                logger.fatal(e, exc_info=True)
+                video_object._tracking_interval = [self._range.value]
+        else:
+            video_object._tracking_interval = [self._range.value]
 
         video_object._video_folder      = os.path.dirname(self._video.value)
         video_object._subtract_bkg      = self._bgsub.value
