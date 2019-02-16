@@ -376,6 +376,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         )
         self._progress.value = 3
 
+        video_object.create_images_folders() # for ram optimization
         logger.debug('call: compute_list_of_blobs')
         pre.compute_list_of_blobs()
         self._progress.value = 4
