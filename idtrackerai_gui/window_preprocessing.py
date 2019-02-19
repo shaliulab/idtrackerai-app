@@ -276,10 +276,8 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         # Convert the frame to black & white
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY) if len(frame.shape)>2 else frame
         mask = self.create_mask(*gray.shape)
-
-        av_intensity = np.float32(np.mean(gray))
+        av_intensity = np.float32(np.mean(np.ma.array(gray, mask=mask==0)))
         av_frame     = gray / av_intensity
-
 
 
         bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, self._background_img, mask, self._bgsub.value)
