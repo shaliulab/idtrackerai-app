@@ -1,5 +1,6 @@
 import numpy as np, cv2, math, os, logging
 from confapp import conf
+conf += '.local_settings'
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +79,8 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._togglegraph = ControlCheckBox('Graph', changed_event=self.__toggle_graph_evt)
         self._graph = GraphAreaWin(parent_win=self)
 
+        self._no_ids = ControlCheckBox('Track without identities')
+
         if conf.PYFORMS_MODE=='GUI':
             self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
             self._savebtn        = ControlButton('Save parameters', default=self.save_window, enabled=False)
@@ -93,7 +96,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
             ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
             ('_polybtn','_rectbtn', '_circlebtn', ' '),
             '_roi',
-            ('_pre_processing', '_savebtn', '_progress')
+            ('_no_ids','_pre_processing', '_savebtn', '_progress')
         ]
 
         self.load_order = [
@@ -303,8 +306,32 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._session.enabled=False
         self.__set_enabled(False)
 
-        self.step1_pre_processing()
-        self.step2_tracking()
+        try:
+            self.step1_pre_processing()
+            if self._no_ids.value:
+                self.step2_wo_tracking()
+            else:
+                self.step2_tracking()
+        except Exception as e:
+            logger.error(e, exc_info=True)
+            self.critical( str(e), 'Error' )
+
+        self._video.enabled=True
+        self._session.enabled=True
+        self.__set_enabled(True)
+
+    def track_wo_video(self):
+
+        self._video.enabled=False
+        self._session.enabled=False
+        self.__set_enabled(False)
+
+        try:
+            self.step1_pre_processing()
+            self.step2_wo_tracking()
+        except Exception as e:
+            self.critical( e )
+            logger.error(e, )
 
         self._video.enabled=True
         self._session.enabled=True
@@ -457,15 +484,39 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         tracker = TrackerAPI( chosen_video )
 
         tracker.start_tracking()
-        """
-        print(video_object)
-        print(list_of_fragments)
-        print(list_of_global_fragments)
 
-        step2_tracking(video_object)
 
-        protocol1(video_object, list_of_fragments, list_of_global_fragments)
-        """
+    def step2_wo_tracking(self):
+
+        video_folder   = os.path.dirname(self._video.value)
+        session_folder = "session_{0}".format(self._session.value)
+
+        videoobj_filepath   = os.path.join(video_folder, session_folder, 'video_object.npy')
+        fragments_filepath  = os.path.join(video_folder, session_folder, 'preprocessing', 'fragments.npy')
+        gfragments_filepath = os.path.join(video_folder, session_folder, 'preprocessing', 'global_fragments.npy')
+
+        video_object = np.load(videoobj_filepath).item()
+        video_object.create_session_folder(self._session.value)
+
+        if video_object.number_of_animals != 1:
+            list_of_fragments        = ListOfFragments.load(fragments_filepath)
+            list_of_global_fragments = ListOfGlobalFragments.load(gfragments_filepath, list_of_fragments.fragments)
+        else:
+            list_of_fragments        = None
+            list_of_global_fragments = None
+
+        chosen_video = Chosen_Video(
+            video=video_object,
+            list_of_fragments=list_of_fragments,
+            list_of_global_fragments=list_of_global_fragments
+        )
+
+        chosen_video.existent_files, chosen_video.old_video = getExistentFiles(chosen_video.video, PROCESSES)
+
+        tracker = TrackerAPI( chosen_video )
+
+        tracker.track_wo_identities()
+
 
     def __update_progress(self, value, label=None, total=None):
 
