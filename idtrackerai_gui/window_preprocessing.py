@@ -68,7 +68,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._intensity = ControlBoundingSlider('Threshold', default=[0,135], min=0, max=255, changed_event=self._player.refresh, enabled=False)
         self._area      = ControlBoundingSlider('Blobs area', default=[150,60000], min=0, max=60000, enabled=False)
         self._range     = ControlBoundingSlider('Frames range', default=[0,10], min=0, max=255, enabled=False)
-        self._nblobs    = ControlNumber('N blobs', default=8, enabled=False)
+        self._nblobs    = ControlNumber('N animals', default=8, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
 
         self._addrange  = ControlButton('Add range', default=self.__rangelst_add_evt)
@@ -282,9 +282,9 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
 
         bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, self._background_img, mask, self._bgsub.value)
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(bin_frame.copy(), frame, int(min_area), int(max_area))
-        self._detected_areas = areas
-        if self._nblobs.value<len(areas):
-            self._nblobs.value = len(areas)
+        #self._detected_areas = areas
+        #if self._nblobs.value<len(areas):
+        #    self._nblobs.value = len(areas)
 
         cv2.drawContours(frame, good_cnt, -1, color=(0,0,255), thickness=-1)
 
