@@ -326,23 +326,6 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self._session.enabled=True
         self.__set_enabled(True)
 
-    def track_wo_video(self):
-
-        self._video.enabled=False
-        self._session.enabled=False
-        self.__set_enabled(False)
-
-        try:
-            self.step1_pre_processing()
-            self.step2_wo_tracking()
-        except Exception as e:
-            self.critical( e )
-            logger.error(e, )
-
-        self._video.enabled=True
-        self._session.enabled=True
-        self.__set_enabled(True)
-
 
 
     def step1_pre_processing(self):
