@@ -1,8 +1,14 @@
 import numpy as np, cv2, math, os, logging
-from confapp import conf
-conf += '.local_settings'
 
 logger = logging.getLogger(__name__)
+
+from confapp import conf
+
+try:
+    import local_settings
+    conf += local_settings
+except:
+    logger.info("Local settings file not available.")
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
