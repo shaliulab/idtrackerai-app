@@ -362,6 +362,10 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
 
         video_object.resolution_reduction = self._resreduct.value
 
+        #Check if it is identity transfer or knowledge_transfer
+        if conf.IDENTITY_TRANSFER:
+            video_object.check_and_set_identity_transfer_if_possible()
+
         video_object.create_session_folder(self._session.value)
 
         logger.debug("create Chosen_Video")
