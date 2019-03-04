@@ -70,12 +70,12 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
 
         self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt, enabled=False)
         self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
-        self._resreduct = ControlNumber('Resolution reduction', default=1., minimum=0, maximum=1, decimals=2, step=0.1, enabled=False)
+        self._resreduct = ControlNumber('Resolution reduction', default=conf.RES_REDUCTION_DEFAULT, minimum=0, maximum=1, decimals=2, step=0.1, enabled=False)
 
-        self._intensity = ControlBoundingSlider('Threshold', default=[0,135], min=0, max=255, changed_event=self._player.refresh, enabled=False)
-        self._area      = ControlBoundingSlider('Blobs area', default=[150,60000], min=0, max=60000, enabled=False)
-        self._range     = ControlBoundingSlider('Frames range', default=[0,10], min=0, max=255, enabled=False)
-        self._nblobs    = ControlNumber('N animals', default=8, enabled=False)
+        self._intensity = ControlBoundingSlider('Threshold', default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT], min=conf.MIN_THRESHOLD, max=conf.MAX_THRESHOLD_DEFAULT, changed_event=self._player.refresh, enabled=False)
+        self._area      = ControlBoundingSlider('Blobs area', default=[conf.MIN_AREA_DEFAULT, conf.MAX_AREA_DEFAULT], min=conf.MAX_AREA_LOWER, max=conf.MAX_AREA_UPPER, enabled=False)
+        self._range     = ControlBoundingSlider('Frames range', default=[0,10], min=0, max=255, enabled=False) ###TODO: Change max of frames range to the number of frames of the video
+        self._nblobs    = ControlNumber('N animals', default=conf.NUMBER_OF_ANIMALS_DEFAULT, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
 
         self._addrange  = ControlButton('Add range', default=self.__rangelst_add_evt)
