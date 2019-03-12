@@ -291,7 +291,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
 
         bin_frame    = segment_frame( av_frame, min_thresh, max_thresh, self._background_img, mask, self._bgsub.value)
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(bin_frame.copy(), frame, int(min_area), int(max_area))
-        #self._detected_areas = areas
+        self._detected_areas = areas
         #if self._nblobs.value<len(areas):
         #    self._nblobs.value = len(areas)
 

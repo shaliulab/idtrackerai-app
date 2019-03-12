@@ -6,3 +6,5 @@
 out-parameters\.txt
 
 local_settings\.py
+
+track_bash\.sh
