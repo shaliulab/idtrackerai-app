@@ -47,7 +47,7 @@ with tf.Session() as sess:
 
 
 
-class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
+class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
 
     def __init__(self, *args, **kwargs):

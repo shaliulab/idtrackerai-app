@@ -10,7 +10,7 @@ if __name__ == "__main__":
         #stream=open("idtrackerai-gui.log", 'w')
     )
     
-    from .window_preprocessing  import IdTrackerAiGUI
+    from .win_idtrackerai  import IdTrackerAiGUI
     from pyforms import start_app
     
     start_app( IdTrackerAiGUI, geometry=(2800,100,800, 600) )
