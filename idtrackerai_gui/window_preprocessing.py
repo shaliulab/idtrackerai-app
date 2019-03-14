@@ -108,7 +108,7 @@ class IdTrackerAiGUI(BaseWidget, ROISelectionWin):
         self.load_order = [
             '_session', '_video', '_range','_rangelst', '_multiple_range',
             '_intensity', '_area', '_nblobs',
-            '_resreduct', '_chcksegm', '_roi',
+            '_resreduct', '_chcksegm', '_roi', '_no_ids',
             '_bgsub'
         ]
 
