@@ -243,12 +243,12 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         logger.debug('call: check_segmentation_consistency')
         if not pre.check_segmentation_consistency() and conf.PYFORMS_MODE=='GUI':
             self.warning(
-                'Found more blobs than animals',
                 "In the next frames it was found more blobs than animals, "
                 "please readjust the segmentation parameters and press 'Track video' again."
-                "<p>{0}</p>".format(', '.join( map(str, self.chosen_video.video.frames_with_more_blobs_than_animals) ) )
-            self._progress.value = 0
+                "<p>{0}</p>".format(', '.join( map(str, pre.chosen_video.video.frames_with_more_blobs_than_animals) ) ),
+                'Found more blobs than animals'
             )
+            self._progress.value = 0
             return
 
         self._progress.value = 5
