@@ -5,12 +5,16 @@ if __name__ == "__main__":
     import logging, locale, coloredlogs
 
     coloredlogs.install(
-        level='DEBUG', 
+        level='DEBUG',
         fmt='[%(levelname)-8s] %(name)-40s %(message)s',
         #stream=open("idtrackerai-gui.log", 'w')
     )
-    
-    from .win_idtrackerai  import IdTrackerAiGUI
     from pyforms import start_app
-    
-    start_app( IdTrackerAiGUI, geometry=(2800,100,800, 600) )
+    from confapp import conf
+
+    if conf.PYFORMS_MODE=='GUI':
+        from .win_idtrackerai  import IdTrackerAiGUI as App
+    else:
+        from .base_idtrackerai  import BaseIdTrackerAi as App
+
+    start_app( App, geometry=(2800,100,800, 600) )
