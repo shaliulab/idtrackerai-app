@@ -48,17 +48,17 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             ('_no_ids', '_pre_processing', '_progress', '_editpaths')
         ]
 
-        self._applyroi.changed_event = self.__apply_roi_changed_evt
-        self._session.changed_event  = self.__session_changed_evt
         self._graph.on_draw = self.__graph_on_draw_evt
+        self._applyroi.changed_event = self.__apply_roi_changed_evt
+        self._session.changed_event = self.__session_changed_evt
         self._player.drag_event = self.on_player_drag_in_video_window
         self._player.end_drag_event = self.on_player_end_drag_in_video_window
         self._player.click_event = self.on_player_click_in_video_window
+        self._video.changed_event = self.__video_changed_evt
+        self._intensity.changed_event = self._player.refresh
         self._player.double_click_event = self.on_player_double_click_in_video_window
         self._player.process_frame_event = self.process_frame_evt
-        self._video.changed_event = self.__video_changed_evt
         self._multiple_range.changed_event = self.__multiple_range_changed_evt
-        self._intensity.changed_event = self._player.refresh
 
         self.setMinimumHeight(900)
         self._player.setMinimumHeight(300)
