@@ -1,4 +1,5 @@
-import os, subprocess, cv2
+import os, subprocess, cv2, numpy as np
+from confapp import conf
 
 from pythonvideoannotator_module_idtrackerai.idtrackerai_importer import import_idtrackerai_project
 from pythonvideoannotator_models.models import Project
@@ -230,4 +231,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         import_idtrackerai_project(proj, session_path, self.__update_progress_evt)
         proj.save(project_path=annotator_projpath)
 
-        proc = subprocess.Popen(['start-video-annotator', annotator_projpath])
+
+        videoannotator_app = start_videoannotator(parent_win=self)
+        QApplication.processEvents()
+        videoannotator_app.load_project(annotator_projpath)
