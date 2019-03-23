@@ -328,6 +328,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         tracker.start_tracking()
 
+        video_object.delete_data()
+
 
     def step2_wo_tracking(self):
 
@@ -359,6 +361,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         tracker = TrackerAPI( chosen_video )
 
         tracker.track_wo_identities()
+
+        video_object.delete_data()
 
 
     def __update_progress(self, value, label=None, total=None):
