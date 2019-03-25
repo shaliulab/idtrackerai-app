@@ -1,4 +1,4 @@
-import os, subprocess, cv2, numpy as np
+import os, subprocess, cv2, numpy as np, sys
 from confapp import conf
 
 from pythonvideoannotator_module_idtrackerai.idtrackerai_importer import import_idtrackerai_project
@@ -20,7 +20,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self._player = ControlPlayer('Player', enabled=False, multiple_files=True)
         self._togglegraph = ControlCheckBox('Graph', changed_event=self.__toggle_graph_evt, enabled=False)
-        self._editpaths      = ControlButton('Edit paths', default=self.__open_videoannotator_evt, enabled=False)
+        self._editpaths      = ControlButton('Validate trajectories', default=self.__open_videoannotator_evt, enabled=False)
         self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
         self._savebtn        = ControlButton('Save parameters', default=self.save_window, enabled=False)
 
@@ -222,16 +222,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
     def __open_videoannotator_evt(self):
 
-        video_folder = os.path.dirname(self._video.value)
+        video_folder   = os.path.dirname(self._video.value)
         session_folder = "session_{0}".format(self._session.value)
+        session_path   = os.path.join(video_folder, session_folder)
 
-        session_path = os.path.join(video_folder, session_folder)
-        annotator_projpath = os.path.join(session_path, 'videoannotator-project')
-        proj = Project()
-        import_idtrackerai_project(proj, session_path, self.__update_progress_evt)
-        proj.save(project_path=annotator_projpath)
-
-
-        videoannotator_app = start_videoannotator(parent_win=self)
-        QApplication.processEvents()
-        videoannotator_app.load_project(annotator_projpath)
+        subprocess.Popen([sys.executable,'-m', 'pythonvideoannotator', session_path])

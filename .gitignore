@@ -8,3 +8,7 @@ out-parameters\.txt
 local_settings\.py
 
 track_bash\.sh
+
+idtrackerai_gui\.egg-info/
+
+out\.txt

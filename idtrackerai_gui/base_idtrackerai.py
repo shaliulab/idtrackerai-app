@@ -109,13 +109,6 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
     ## GUI EVENTS ###########################################
     #########################################################
 
-
-
-
-
-
-
-
     def __bgsub_changed_evt(self):
 
         if self._bgsub.value:
