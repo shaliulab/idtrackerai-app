@@ -147,11 +147,11 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self.set_controls_enabled(False)
 
         try:
-            self.step1_pre_processing()
-            if self._no_ids.value:
-                self.step2_wo_tracking()
-            else:
-                self.step2_tracking()
+            if self.step1_pre_processing():
+                if self._no_ids.value:
+                    self.step2_wo_tracking()
+                else:
+                    self.step2_tracking()
         except Exception as e:
             logger.error(e, exc_info=True)
             self.critical( str(e), 'Error' )
@@ -234,15 +234,25 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self._progress.value = 4
 
         logger.debug('call: check_segmentation_consistency')
-        if not pre.check_segmentation_consistency() and conf.PYFORMS_MODE=='GUI':
+
+        if self._chcksegm.value and \
+           not pre.check_segmentation_consistency():
+            outfile_path = os.path.join(video_object.session_folder, 'inconsistent_frames.csv')
+
             self.warning(
-                "In the next frames it was found more blobs than animals, "
-                "please readjust the segmentation parameters and press 'Track video' again."
-                "<p>{0}</p>".format(', '.join( map(str, pre.chosen_video.video.frames_with_more_blobs_than_animals) ) ),
+                "On some frames it was found more blobs than animals, "
+                "you can find the index of these frames in the file:"
+                "<p>{0}</p>"
+                "<p>Please readjust the segmentation parameters and press 'Track video' again.</p>".format(outfile_path),
                 'Found more blobs than animals'
             )
+            with open(outfile_path, 'w') as outfile:
+                outfile.write(
+                    '\n'.join(map(str, pre.chosen_video.video.frames_with_more_blobs_than_animals))
+                )
+
             self._progress.value = 0
-            return
+            return False
 
         self._progress.value = 5
 
@@ -289,6 +299,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
             trainner.store_validation_accuracy_and_loss_data.plot(ax_arr, color ='b', plot_now = False)
             # plt.show()
             fig.savefig(os.path.join(video_object.crossings_detector_folder, 'output_crossing_dectector.pdf'))
+
+        return True
 
     def step2_tracking(self):
 
