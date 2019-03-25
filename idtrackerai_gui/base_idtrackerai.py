@@ -328,6 +328,11 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         tracker.start_tracking()
 
+        if video_object.number_of_animals != 1:
+            list_of_fragments.update_identification_images_dataset()
+
+        logger.info("Estimated accuracy: {}".format(video_object.overall_P2))
+
         video_object.delete_data()
 
 
