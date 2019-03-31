@@ -256,8 +256,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         self._progress.value = 5
 
-        logger.debug('call: save_list_of_blobs')
-        pre.save_list_of_blobs()
+        logger.debug('call: save_list_of_blobs_segmented')
+        pre.save_list_of_blobs_segmented()
         self._progress.value = 6
 
         logger.debug('call: model_area_and_crossing_detector')

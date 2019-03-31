@@ -22,3 +22,5 @@ idtrackerai_gui\.egg-info/top_level\.txt
 idtrackerai_gui\.egg-info/
 
 out\.txt
+
+track\.sh
