@@ -83,7 +83,6 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._togglegraph.enabled = status
         self._addrange.enabled = status
 
-        print(status, 'status')
 
     def process_frame_evt(self, frame):
         """
