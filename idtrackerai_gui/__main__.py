@@ -17,4 +17,4 @@ if __name__ == "__main__":
     else:
         from .base_idtrackerai  import BaseIdTrackerAi as App
 
-    start_app( App, geometry=(2800,100,800, 600) )
+    start_app( App, geometry=(100,100,800, 600) )
