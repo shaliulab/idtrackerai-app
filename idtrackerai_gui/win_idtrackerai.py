@@ -56,6 +56,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._player.end_drag_event = self.on_player_end_drag_in_video_window
         self._player.click_event = self.on_player_click_in_video_window
         self._video.changed_event = self.__video_changed_evt
+        self._video_path.changed_event = self.__video_changed_evt
         self._intensity.changed_event = self._player.refresh
         self._player.double_click_event = self.on_player_double_click_in_video_window
         self._player.process_frame_event = self.process_frame_evt
@@ -145,8 +146,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         Function called when the video file is selected.
         Ask to the player to load the video file.
         """
-        if self._video.value:
-            self._player.value = self._video.value
+        if self.video_path:
+            self._player.value = self.video_path
             if self._player.value:
                 self._range.max    = self._player.max
                 self._range.value  = [0, self._player.max]
@@ -194,7 +195,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             self._circlebtn.hide()
 
     def __session_changed_evt(self):
-        video_folder   = os.path.dirname(self._video.value)
+        video_folder   = os.path.dirname(self.video_path)
         session_folder = "session_{0}".format(self._session.value)
         session_path   = os.path.join(video_folder, session_folder)
         blobs_path     = os.path.join(session_path, 'preprocessing', 'blobs_collection_no_gaps.npy')
@@ -221,7 +222,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
     def __open_videoannotator_evt(self):
 
-        video_folder   = os.path.dirname(self._video.value)
+        video_folder   = os.path.dirname(self.video_path)
         session_folder = "session_{0}".format(self._session.value)
         session_path   = os.path.join(video_folder, session_folder)
 

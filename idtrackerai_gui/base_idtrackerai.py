@@ -54,6 +54,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         self._session   = ControlText('Session', default='session0')
         self._video     = ControlFile('File')
+        self._video_path = ControlFile('Video file. Note: overwrite the _video parameter defined in the json. Nice to have to execute the application in a cluster environment')
         self._applyroi  = ControlCheckBox('Apply ROI?', enabled=False)
 
         self._roi       = ControlList('ROI', enabled=False, readonly=True, select_entire_row=True,
@@ -92,8 +93,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
             '_bgsub'
         ]
 
-
-        self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
+        #self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
 
         self.__bgsub_changed_evt()
 
@@ -112,8 +112,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
     def __bgsub_changed_evt(self):
 
         if self._bgsub.value:
-            if self._video.value:
-                video = Video( video_path=self._video.value )
+            if self.video_path:
+                video = Video( video_path=self.video_path )
                 video.get_info()
                 video._subtract_bkg = True
                 video._original_bkg = cumpute_background(video)
@@ -165,7 +165,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
     def step1_pre_processing(self):
 
         video_object = Video(
-            video_path=self._video.value
+            video_path=self.video_path
         )
         video_object.get_info()
 
@@ -187,7 +187,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         else:
             video_object._tracking_interval = [self._range.value]
 
-        video_object._video_folder      = os.path.dirname(self._video.value)
+        video_object._video_folder      = os.path.dirname(self.video_path)
         video_object._subtract_bkg      = self._bgsub.value
         video_object._original_bkg      = self._original_bkg
         video_object._number_of_animals = int(self._nblobs.value)
@@ -304,7 +304,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
     def step2_tracking(self):
 
-        video_folder   = os.path.dirname(self._video.value)
+        video_folder   = os.path.dirname(self.video_path)
         session_folder = "session_{0}".format(self._session.value)
 
         videoobj_filepath   = os.path.join(video_folder, session_folder, 'video_object.npy')
@@ -343,7 +343,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
     def step2_wo_tracking(self):
 
-        video_folder   = os.path.dirname(self._video.value)
+        video_folder   = os.path.dirname(self.video_path)
         session_folder = "session_{0}".format(self._session.value)
 
         videoobj_filepath   = os.path.join(video_folder, session_folder, 'video_object.npy')
@@ -375,9 +375,15 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         video_object.delete_data()
 
 
+
     def __update_progress(self, value, label=None, total=None):
 
         if total is not None: self._progress.max   = total
         if label is not None: self._progress.label = label
 
         self._progress.value = value
+
+
+    @property
+    def video_path(self):
+        return self._video_path.value if self._video_path.value else self._video.path
