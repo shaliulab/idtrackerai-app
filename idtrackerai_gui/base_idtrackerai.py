@@ -52,10 +52,10 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         BaseWidget.__init__(self, title='idtracker.ai')
         ROISelectionWin.__init__(self)
 
-        self._session   = ControlText('Session', default='session0')
-        self._video     = ControlFile('File')
+        self._session    = ControlText('Session', default='session0')
+        self._video      = ControlFile('File')
         self._video_path = ControlFile('Video file. Note: overwrite the _video parameter defined in the json. Nice to have to execute the application in a cluster environment')
-        self._applyroi  = ControlCheckBox('Apply ROI?', enabled=False)
+        self._applyroi   = ControlCheckBox('Apply ROI?', enabled=False)
 
         self._roi       = ControlList('ROI', enabled=False, readonly=True, select_entire_row=True,
                                       item_selection_changed_event=self.roi_selection_changed_evt,
@@ -386,4 +386,4 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
     @property
     def video_path(self):
-        return self._video_path.value if self._video_path.value else self._video.path
+        return self._video_path.value if self._video_path.value else self._video.value
