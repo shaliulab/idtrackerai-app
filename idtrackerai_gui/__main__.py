@@ -12,6 +12,8 @@ if __name__ == "__main__":
     from pyforms import start_app
     from confapp import conf
 
+    logging.getLogger('PyQt5').setLevel(logging.INFO)
+
     if conf.PYFORMS_MODE=='GUI':
         from .win_idtrackerai  import IdTrackerAiGUI as App
     else:
