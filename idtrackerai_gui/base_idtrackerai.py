@@ -311,7 +311,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         fragments_filepath  = os.path.join(video_folder, session_folder, 'preprocessing', 'fragments.npy')
         gfragments_filepath = os.path.join(video_folder, session_folder, 'preprocessing', 'global_fragments.npy')
 
-        video_object = np.load(videoobj_filepath).item()
+        video_object = np.load(videoobj_filepath, allow_pickle=True).item()
         video_object.create_session_folder(self._session.value)
 
         if video_object.number_of_animals != 1:
@@ -350,7 +350,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         fragments_filepath  = os.path.join(video_folder, session_folder, 'preprocessing', 'fragments.npy')
         gfragments_filepath = os.path.join(video_folder, session_folder, 'preprocessing', 'global_fragments.npy')
 
-        video_object = np.load(videoobj_filepath).item()
+        video_object = np.load(videoobj_filepath, allow_pickle=True).item()
         video_object.create_session_folder(self._session.value)
 
         if video_object.number_of_animals != 1:
