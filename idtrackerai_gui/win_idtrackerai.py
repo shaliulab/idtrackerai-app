@@ -3,7 +3,7 @@ from confapp import conf
 
 # from pythonvideoannotator_module_idtrackerai.idtrackerai_importer import import_idtrackerai_project
 from pythonvideoannotator_models.models import Project
-from idtrackerai.utils.video_utils import segment_frame, blob_extractor
+from idtrackerai.utils.segmentation_utils import segment_frame, blob_extractor
 
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlPlayer

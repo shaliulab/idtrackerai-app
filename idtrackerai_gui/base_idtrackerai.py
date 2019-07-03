@@ -20,7 +20,7 @@ from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
-from idtrackerai.utils.video_utils import cumpute_background
+from idtrackerai.utils.segmentation_utils import cumpute_background
 from idtrackerai.utils.py_utils import  getExistentFiles
 from idtrackerai.constants import PROCESSES
 
