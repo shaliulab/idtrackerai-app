@@ -29,8 +29,8 @@ from idtrackerai.list_of_global_fragments     import ListOfGlobalFragments
 
 from idtrackerai.video import Video
 
-from idtrackerai.gui.tracker_api import TrackerAPI
-from idtrackerai.gui.preprocessing_preview_api import PreprocessingPreviewAPI
+from idtrackerai.tracker_api import TrackerAPI
+from idtrackerai.preprocessing_preview_api import PreprocessingPreviewAPI
 
 from .gui.roi_selection import ROISelectionWin
 
