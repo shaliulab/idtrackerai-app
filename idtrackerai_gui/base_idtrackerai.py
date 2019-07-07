@@ -276,30 +276,6 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         list_of_fragments = pre.list_of_fragments
         list_of_global_fragments = pre.list_of_global_fragments
 
-        if chosen_video.video.there_are_crossings:
-
-            import matplotlib
-            import matplotlib.pyplot as plt
-
-            matplotlib.rcParams.update({
-                'font.size':        8,
-                'axes.labelsize':   8,
-                'xtick.labelsize' : 8,
-                'ytick.labelsize' : 8,
-                'legend.fontsize':  8
-            })
-
-            fig, ax_arr = plt.subplots(3)
-            # fig.set_facecolor((.188, .188, .188))
-            fig.subplots_adjust(left=0.1, bottom=0.15, right=.9, top=.95, wspace=None, hspace=1)
-            # fig.set_facecolor((.188, .188, .188))
-            # [(ax.set_facecolor((.188, .188, .188)), ax.tick_params(color='white', labelcolor='white'), ax.xaxis.label.set_color('white'), ax.yaxis.label.set_color('white')) for ax in ax_arr]
-            # [spine.set_edgecolor('white') for ax in ax_arr for spine in ax.spines.values()]
-            trainner.store_training_accuracy_and_loss_data.plot(ax_arr, color = 'r', plot_now = False)
-            trainner.store_validation_accuracy_and_loss_data.plot(ax_arr, color ='b', plot_now = False)
-            # plt.show()
-            fig.savefig(os.path.join(video_object.crossings_detector_folder, 'output_crossing_dectector.pdf'))
-
         return True
 
     def step2_tracking(self):

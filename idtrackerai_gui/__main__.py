@@ -28,7 +28,6 @@ if __name__ == "__main__":
         import traceback
         ex_type, ex, tb = sys.exc_info()
         traceback.print_exception(ex_type, ex, tb)
-    finally:
         print("\n")
         print("idtracker.ai quit unexpectedly.")
         print("If this error persists please open an issue at")
