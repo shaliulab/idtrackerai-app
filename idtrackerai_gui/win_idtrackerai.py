@@ -70,6 +70,16 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self.__apply_roi_changed_evt()
         self.__session_changed_evt()
 
+        self._multiple_files = False # flag to open multiple video files with similar names
+
+    def save_form(self, data={}, path=None):
+        data['open-multiple-files'] = self._multiple_files
+        return super().save_form(data, path)
+
+    def load_form(self, data, path=None):
+        self._multiple_files = data.get('open-multiple-files', False)
+        super().load_form(data, path)
+
     def set_controls_enabled(self, status):
         super().set_controls_enabled(status)
         self._editpaths.enabled = status
@@ -150,7 +160,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
                 self._range.max    = self._player.max
                 self._range.value  = [0, self._player.max]
                 self.set_controls_enabled(True)
-
+                self._multiple_files = self._player.multiple_files
             else:
                 self.set_controls_enabled(False)
 

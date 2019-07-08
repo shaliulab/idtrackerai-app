@@ -165,7 +165,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
     def step1_pre_processing(self):
 
         video_object = Video(
-            video_path=self.video_path
+            video_path=self.video_path,
+            open_multiple_files = self._multiple_files
         )
         video_object.get_info()
 
