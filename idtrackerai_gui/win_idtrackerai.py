@@ -1,7 +1,6 @@
 import os, subprocess, cv2, numpy as np, sys
 from confapp import conf
 
-from pythonvideoannotator_models.models import Project
 from idtrackerai.utils.segmentation_utils import segment_frame, blob_extractor
 
 from pyforms.controls import ControlButton

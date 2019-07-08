@@ -1,7 +1,9 @@
 import cv2
 import math
 import numpy as np
+import logging
 
+logger = logging.getLogger(__name__)
 
 def points_distance(p1, p2):
     return  math.hypot(p2[0]-p1[0], p2[1]-p1[1])
@@ -95,17 +97,23 @@ class ROISelectionWin(object):
             for row_index, row in enumerate(self._roi.value):
                 points = eval( row[0] )
 
-                if len(points)>=3:
+                if len(points)>3:
                     cv2.polylines(frame, [np.array(points ,np.int32)], True, (0,255,0), 2, lineType=cv2.LINE_AA)
+                else:
+                    # draw vertices
+                    for i, point in enumerate( points ):
+                        point = tuple(point)
+                        if self._selected_point == i and index==row_index:
+                            cv2.circle(frame, point, 4, (0,0,255), 2)
+                        else:
+                            cv2.circle(frame, point, 4, (0,255,0), 2)
 
-                # draw vertices
-                for i, point in enumerate( points ):
-                    if self._selected_point == i and index==row_index:
-                        cv2.circle(frame, point, 4, (0,0,255), 2)
-                    else:
-                        cv2.circle(frame, point, 4, (0,255,0), 2)
-        except:
-            pass
+                if index == row_index and self._selected_point is not None and len(points)>self._selected_point:
+                    point = tuple(points[self._selected_point])
+                    cv2.circle(frame, point, 4, (0, 0, 255), 2)
+
+        except Exception as e:
+            logger.debug(str(e), exc_info=True)
 
         # Draw the polygons in edition
         if self._start_point and self._end_point:
