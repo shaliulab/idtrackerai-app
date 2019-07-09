@@ -204,11 +204,12 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         video_folder   = os.path.dirname(self.video_path)
         session_folder = "session_{0}".format(self._session.value)
         session_path   = os.path.join(video_folder, session_folder)
-        blobs_path     = os.path.join(session_path, 'preprocessing', 'blobs_collection_no_gaps.npy')
+        blobs_path_1   = os.path.join(session_path, 'preprocessing', 'blobs_collection_no_gaps.npy')
+        blobs_path_2   = os.path.join(session_path, 'preprocessing', 'blobs_collection.npy')
         vidobj_path    = os.path.join(session_path, 'video_object.npy')
 
         if os.path.exists(session_path) and \
-                os.path.exists(blobs_path) and \
+                (os.path.exists(blobs_path_1) or os.path.exists(blobs_path_2)) and \
                 os.path.exists(vidobj_path):
             self._editpaths.enabled = True
 
