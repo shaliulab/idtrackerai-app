@@ -109,6 +109,10 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
     ## GUI EVENTS ###########################################
     #########################################################
 
+    def load_form(self, data, path=None):
+        self._multiple_files = data.get('open-multiple-files', False)
+        super().load_form(data, path)
+
     def __bgsub_changed_evt(self):
 
         if self._bgsub.value:

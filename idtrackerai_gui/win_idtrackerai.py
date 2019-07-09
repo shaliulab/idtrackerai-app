@@ -76,9 +76,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         data['open-multiple-files'] = self._multiple_files
         return super().save_form(data, path)
 
-    def load_form(self, data, path=None):
-        self._multiple_files = data.get('open-multiple-files', False)
-        super().load_form(data, path)
+
 
     def set_controls_enabled(self, status):
         super().set_controls_enabled(status)
