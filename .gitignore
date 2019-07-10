@@ -24,3 +24,7 @@ idtrackerai_gui\.egg-info/
 out\.txt
 
 track\.sh
+
+build/
+
+dist/
