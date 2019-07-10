@@ -8,7 +8,7 @@ with open('idtrackerai_app/__init__.py', 'r') as fd:
     version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', fd.read(), re.MULTILINE).group(1)
 
 setup(
-    name='idtrackerai-gui',
+    name='idtrackerai-app',
     version=version,
     description="""""",
     author=['Ricardo Ribeiro', 'Francisco Romero Ferrero'],

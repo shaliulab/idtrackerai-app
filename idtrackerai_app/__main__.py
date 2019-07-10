@@ -2,7 +2,7 @@
 #Execute the application
 if __name__ == "__main__":
     import logging, locale, coloredlogs
-    logging.basicConfig(filename='idtrackerai-gui.log', filemode='w',
+    logging.basicConfig(filename='idtrackerai-app.log', filemode='w',
                         format='%(name)s - %(levelname)s - %(message)s')
     coloredlogs.install(
         level='DEBUG',
