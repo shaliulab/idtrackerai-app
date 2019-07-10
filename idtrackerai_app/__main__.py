@@ -23,6 +23,8 @@ if __name__ == "__main__":
 
     try:
         start_app( App, geometry=(100,100,800, 600) )
+    except SystemExit:
+        pass
     except:
         import sys
         import traceback
