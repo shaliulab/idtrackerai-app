@@ -1,6 +1,5 @@
 
-#Execute the application
-if __name__ == "__main__":
+def start():
     import logging, locale, coloredlogs
     logging.basicConfig(filename='idtrackerai-app.log', filemode='w',
                         format='%(name)s - %(levelname)s - %(message)s')
@@ -37,3 +36,8 @@ if __name__ == "__main__":
         print("or send an email to idtrackerai@gmail.com")
         print("Check the log file idtrackerai-gui.log in")
         print("your working directory and attach it to the issue.")
+
+
+#Execute the application
+if __name__ == "__main__":
+    start()

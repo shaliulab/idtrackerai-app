@@ -9,18 +9,6 @@ local_settings\.py
 
 track_bash\.sh
 
-idtrackerai_gui\.egg-info/dependency_links\.txt
-
-idtrackerai_gui\.egg-info/PKG-INFO
-
-idtrackerai_gui\.egg-info/requires\.txt
-
-idtrackerai_gui\.egg-info/SOURCES\.txt
-
-idtrackerai_gui\.egg-info/top_level\.txt
-
-idtrackerai_gui\.egg-info/
-
 out\.txt
 
 track\.sh
@@ -28,3 +16,5 @@ track\.sh
 build/
 
 dist/
+
+idtrackerai_app\.egg-info/
