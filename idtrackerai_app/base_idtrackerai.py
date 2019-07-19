@@ -52,7 +52,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         BaseWidget.__init__(self, title='idtracker.ai')
         ROISelectionWin.__init__(self)
 
-        self._session    = ControlText('Session', default='session0')
+        self._session    = ControlText('Session', default='test')
         self._video      = ControlFile('File')
         self._video_path = ControlFile('Video file. Note: overwrite the _video parameter defined in the json. Nice to have to execute the application in a cluster environment')
         self._applyroi   = ControlCheckBox('Apply ROI?', enabled=False)
