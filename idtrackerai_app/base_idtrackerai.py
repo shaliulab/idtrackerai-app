@@ -53,9 +53,9 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         ROISelectionWin.__init__(self)
 
         self._session    = ControlText('Session', default='test')
-        self._video      = ControlFile('File')
+        self._video      = ControlFile('Video')
         self._video_path = ControlFile('Video file. Note: overwrite the _video parameter defined in the json. Nice to have to execute the application in a cluster environment')
-        self._applyroi   = ControlCheckBox('Apply ROI?', enabled=False)
+        self._applyroi   = ControlCheckBox('Apply ROI', enabled=False)
 
         self._roi       = ControlList('ROI', enabled=False, readonly=True, select_entire_row=True,
                                       item_selection_changed_event=self.roi_selection_changed_evt,
@@ -65,14 +65,14 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
         self._resreduct = ControlNumber('Resolution reduction', default=conf.RES_REDUCTION_DEFAULT, minimum=0, maximum=1, decimals=2, step=0.1, enabled=False)
 
-        self._intensity = ControlBoundingSlider('Threshold', default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT], min=conf.MIN_THRESHOLD, max=conf.MAX_THRESHOLD, enabled=False)
-        self._area      = ControlBoundingSlider('Blobs area', default=[conf.MIN_AREA_DEFAULT, conf.MAX_AREA_DEFAULT], min=conf.MAX_AREA_LOWER, max=conf.MAX_AREA_UPPER, enabled=False)
-        self._range     = ControlBoundingSlider('Frames range', default=[0,10], min=0, max=255, enabled=False) ###TODO: Change max of frames range to the number of frames of the video
-        self._nblobs    = ControlNumber('N animals', default=conf.NUMBER_OF_ANIMALS_DEFAULT, enabled=False)
+        self._intensity = ControlBoundingSlider('Intensity thresnolds', default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT], min=conf.MIN_THRESHOLD, max=conf.MAX_THRESHOLD, enabled=False)
+        self._area      = ControlBoundingSlider('Area thresholds', default=[conf.MIN_AREA_DEFAULT, conf.MAX_AREA_DEFAULT], min=conf.MAX_AREA_LOWER, max=conf.MAX_AREA_UPPER, enabled=False)
+        self._range     = ControlBoundingSlider('Tracking interval', default=[0,10], min=0, max=255, enabled=False) ###TODO: Change max of frames range to the number of frames of the video
+        self._nblobs    = ControlNumber('Number of animals', default=conf.NUMBER_OF_ANIMALS_DEFAULT, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
 
-        self._rangelst  = ControlText( 'Frames ranges', visible=False )
-        self._multiple_range = ControlCheckBox('Multiple ranges', enabled=False)
+        self._rangelst  = ControlText( 'Tracking intervals', visible=False )
+        self._multiple_range = ControlCheckBox('Multiple intervals', enabled=False)
 
         self._no_ids = ControlCheckBox('Track without identities')
 
