@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 from confapp import conf
 
 try:
+    
     import local_settings
     conf += local_settings
 except:
@@ -65,14 +66,14 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
         self._resreduct = ControlNumber('Resolution reduction', default=conf.RES_REDUCTION_DEFAULT, minimum=0, maximum=1, decimals=2, step=0.1, enabled=False)
 
-        self._intensity = ControlBoundingSlider('Intensity thresnolds', default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT], min=conf.MIN_THRESHOLD, max=conf.MAX_THRESHOLD, enabled=False)
+        self._intensity = ControlBoundingSlider('Intensity thresholds', default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT], min=conf.MIN_THRESHOLD, max=conf.MAX_THRESHOLD, enabled=False)
         self._area      = ControlBoundingSlider('Area thresholds', default=[conf.MIN_AREA_DEFAULT, conf.MAX_AREA_DEFAULT], min=conf.MAX_AREA_LOWER, max=conf.MAX_AREA_UPPER, enabled=False)
         self._range     = ControlBoundingSlider('Tracking interval', default=[0,10], min=0, max=255, enabled=False) ###TODO: Change max of frames range to the number of frames of the video
         self._nblobs    = ControlNumber('Number of animals', default=conf.NUMBER_OF_ANIMALS_DEFAULT, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
 
         self._rangelst  = ControlText( 'Tracking intervals', visible=False )
-        self._multiple_range = ControlCheckBox('Multiple intervals', enabled=False)
+        self._multiple_range = ControlCheckBox('Multiple', enabled=False)
 
         self._no_ids = ControlCheckBox('Track without identities')
 

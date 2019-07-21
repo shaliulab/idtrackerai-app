@@ -17,7 +17,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
     def __init__(self, *args, **kwargs):
 
         self._player = ControlPlayer('Player', enabled=False, multiple_files=True)
-        self._togglegraph = ControlCheckBox('Graph', changed_event=self.__toggle_graph_evt, enabled=False)
+        self._togglegraph = ControlCheckBox('Segmented blobs info', changed_event=self.__toggle_graph_evt, enabled=False)
         self._editpaths      = ControlButton('Validate trajectories', default=self.__open_videoannotator_evt, enabled=False)
         self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
         self._savebtn        = ControlButton('Save parameters', default=self.save_window, enabled=False)
@@ -26,7 +26,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._rectbtn = ControlButton('Rectangle', checkable=True, enabled=False)
         self._circlebtn = ControlButton('Ellipse', checkable=True, enabled=False, default=self.circlebtn_click_evt)
 
-        self._addrange = ControlButton('Add range', default=self.__rangelst_add_evt, visible=False)
+        self._addrange = ControlButton('Add interval', default=self.__rangelst_add_evt, visible=False)
 
         self._graph = GraphAreaWin(parent_win=self)
 
@@ -38,11 +38,12 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             ('_video', '_session', '_savebtn'),
             '_player',
             '=',
+            ('_nblobs', '_togglegraph', '_chcksegm', ' '),
+            ('_intensity', '_bgsub'),
+            ('_area', '_resreduct'),
             ('_range', '_rangelst', '_addrange', '_multiple_range'),
-            '_intensity',
-            ('_area', '_togglegraph'),
-            ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
-            ('_polybtn', '_rectbtn', '_circlebtn', ' '),
+            ('_applyroi', ' '),
+            ('_rectbtn', '_polybtn', '_circlebtn', ' '),
             '_roi',
             ('_no_ids', '_pre_processing', '_progress', '_editpaths')
         ]
@@ -62,7 +63,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self.setMinimumHeight(900)
         self._player.setMinimumHeight(300)
-        self._togglegraph.form.setMaximumWidth(70)
+        self._togglegraph.form.setMaximumWidth(180)
         self._roi.setMaximumHeight(100)
         self._session.form.setMaximumWidth(250)
         self._multiple_range.form.setMaximumWidth(130)
@@ -181,9 +182,10 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         axes.bar(range(1,len(areas)+1), areas, 0.5)
         if len(areas) > 0:
             min_area = np.min(areas)
-            axes.axhline(min_area, color = 'w', linewidth = .3)
+            axes.axhline(min_area, color = 'k', linewidth = .3)
             axes.set_title( str(len(areas)) + " blobs detected. Minimum area: " + str(min_area) )
-
+            axes.set_xlabel('Blob index')
+            axes.set_ylabel('Area in pixels')
 
     def __apply_roi_changed_evt(self):
         """
