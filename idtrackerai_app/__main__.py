@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.getcwd())
+
 
 def start():
     import logging, locale, coloredlogs
