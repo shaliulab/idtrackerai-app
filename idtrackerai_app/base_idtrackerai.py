@@ -105,6 +105,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self._background_img = None
         # store the computed background with the original size
         self._original_bkg = None
+        # flag to open multiple video files with similar names
+        self._multiple_files = False
 
     #########################################################
     ## GUI EVENTS ###########################################
@@ -118,7 +120,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         if self._bgsub.value:
             if self.video_path:
-                video = Video( video_path=self.video_path )
+                video = Video( video_path=self.video_path, open_multiple_files=self.open_multiple_files )
                 video.get_info()
                 video._subtract_bkg = True
                 video._original_bkg = cumpute_background(video)
@@ -171,7 +173,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         video_object = Video(
             video_path=self.video_path,
-            open_multiple_files = self._multiple_files
+            open_multiple_files = self.open_multiple_files
         )
         video_object.get_info()
 
@@ -365,6 +367,9 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         self._progress.value = value
 
+    @property
+    def open_multiple_files(self):
+        return self._multiple_files
 
     @property
     def video_path(self):

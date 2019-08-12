@@ -71,13 +71,14 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self.__apply_roi_changed_evt()
         self.__session_changed_evt()
 
-        self._multiple_files = False # flag to open multiple video files with similar names
-
     def save_form(self, data={}, path=None):
-        data['open-multiple-files'] = self._multiple_files
+        data['open-multiple-files'] = self.open_multiple_files
         return super().save_form(data, path)
 
+    def track_video(self):
+        super().track_video()
 
+        self.info('The tracking has finished', 'Ended')
 
     def set_controls_enabled(self, status):
         super().set_controls_enabled(status)
@@ -224,7 +225,6 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             self._progress.value = 0
             self._progress.show()
         elif self._progress.max == progress_count:
-            #self._progress.hide()
             self._progress.value = 0
         else:
             self._progress.value = progress_count
@@ -236,3 +236,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         session_path   = os.path.join(video_folder, session_folder)
 
         subprocess.Popen([sys.executable,'-m', 'pythonvideoannotator', session_path])
+
+
+    @property
+    def open_multiple_files(self):
+        return self._player.multiple_files

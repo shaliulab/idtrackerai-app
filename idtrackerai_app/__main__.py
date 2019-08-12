@@ -9,8 +9,16 @@ def start():
     coloredlogs.install(
         level='DEBUG',
         fmt='[%(levelname)-8s] %(name)-40s %(message)s',
-        # stream=open("idtrackerai-gui.log", 'w')
+        #stream=open("idtrackerai-app.log", 'w')
     )
+    coloredlogs.install(
+        level='DEBUG',
+        fmt='[%(levelname)-8s] %(name)-40s %(message)s',
+        stream=open("idtrackerai-app.log", 'w')
+    )
+
+    #logging.getLogger('').addHandler(open("idtrackerai-app.log", 'w'))
+
     from pyforms import start_app
     from confapp import conf
 
