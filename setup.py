@@ -21,7 +21,8 @@ setup(
         'pyforms-terminal'
     ],
     extras_require={
-        'gui': ['pyforms-gui'],
+        'gui':      ['pyforms-gui', 'python-video-annotator'],
+        'only-gui': ['pyforms-gui'],
     },
     entry_points={
         'console_scripts': [
