@@ -157,10 +157,9 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         if self.video_path:
             self._player.value = self.video_path
             if self._player.value:
-                self._range.max    = self._player.max
-                self._range.value  = [0, self._player.max]
+                self._range.max   = self._player.max
+                self._range.value = [0, self._player.max]
                 self.set_controls_enabled(True)
-                self._multiple_files = self._player.multiple_files
             else:
                 self.set_controls_enabled(False)
 
