@@ -79,7 +79,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
     def track_video(self):
         super().track_video()
 
-        self.info('The tracking has finished', 'Ended')
+        self.info(self._final_message, 'Ended')
 
     def set_controls_enabled(self, status):
         super().set_controls_enabled(status)

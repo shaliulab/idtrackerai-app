@@ -324,6 +324,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         video_object.delete_data()
 
+        self._final_message = "Tracking finished with {0:.2f} estimated accuracy.".format(video_object.overall_P2*100)
+
 
     def step2_wo_tracking(self):
 
@@ -357,6 +359,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         tracker.track_wo_identities()
 
         video_object.delete_data()
+
+        self._final_message = "Tracking without identities finished. No estimated accuracy computed."
 
 
 
