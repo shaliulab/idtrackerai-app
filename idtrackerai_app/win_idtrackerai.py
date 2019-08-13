@@ -60,6 +60,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._player.double_click_event = self.on_player_double_click_in_video_window
         self._player.process_frame_event = self.process_frame_evt
         self._multiple_range.changed_event = self.__multiple_range_changed_evt
+        self._resreduct.changed_event = self.__resreduct_changed_evt
 
         self.setMinimumHeight(900)
         self._player.setMinimumHeight(300)
@@ -130,6 +131,9 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self.draw_rois(frame)
         return frame
 
+    def __resreduct_changed_evt(self):
+        self._player.refresh()
+
     def __rangelst_add_evt(self):
         win = RangeWin(
             parent_win=self,
@@ -160,11 +164,16 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
                 self._range.max   = self._player.max
                 self._range.value = [0, self._player.max]
                 self.set_controls_enabled(True)
+                self._player.forward_one_frame()
             else:
                 self.set_controls_enabled(False)
 
         else:
             self.set_controls_enabled(False)
+
+    def bgsub_changed_evt(self):
+        super().bgsub_changed_evt()
+        self._player.refresh()
 
     def __toggle_graph_evt(self):
         if self._togglegraph.value:

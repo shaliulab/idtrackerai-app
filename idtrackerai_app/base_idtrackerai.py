@@ -62,9 +62,9 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
                                       item_selection_changed_event=self.roi_selection_changed_evt,
                                       remove_function=self.remove_roi)
 
-        self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.__bgsub_changed_evt, enabled=False)
+        self._bgsub     = ControlCheckBox('Subtract background', changed_event=self.bgsub_changed_evt, enabled=False)
         self._chcksegm  = ControlCheckBox('Check segmentation', enabled=False)
-        self._resreduct = ControlNumber('Resolution reduction', default=conf.RES_REDUCTION_DEFAULT, minimum=0, maximum=1, decimals=2, step=0.1, enabled=False)
+        self._resreduct = ControlNumber('Resolution reduction', default=conf.RES_REDUCTION_DEFAULT, minimum=0.01, maximum=1, decimals=2, step=0.1, enabled=False)
 
         self._intensity = ControlBoundingSlider('Intensity thresholds', default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT], min=conf.MIN_THRESHOLD, max=conf.MAX_THRESHOLD, enabled=False)
         self._area      = ControlBoundingSlider('Area thresholds', default=[conf.MIN_AREA_DEFAULT, conf.MAX_AREA_DEFAULT], min=conf.AREA_LOWER, max=conf.AREA_UPPER, enabled=False)
@@ -96,7 +96,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         #self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
 
-        self.__bgsub_changed_evt()
+        self.bgsub_changed_evt()
 
         #self._resreduct.value = 0.3
         #self._area.value = [5, 50]
@@ -116,7 +116,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self._multiple_files = data.get('open-multiple-files', False)
         super().load_form(data, path)
 
-    def __bgsub_changed_evt(self):
+    def bgsub_changed_evt(self):
 
         if self._bgsub.value:
             if self.video_path:
