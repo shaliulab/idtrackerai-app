@@ -260,6 +260,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
                 )
 
             self._progress.value = 0
+            self._final_message = "Readjust the segmentation parameters and track the video again."
             return False
 
         self._progress.value = 5
