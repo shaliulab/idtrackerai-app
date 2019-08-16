@@ -21,7 +21,9 @@ setup(
         'pyforms-terminal'
     ],
     extras_require={
-        'gui':      ['pyforms-gui', 'python-video-annotator'],
+        'gui':      ['pyforms-gui',
+                     'python-video-annotator',
+                     'python-video-annotator-module-idtrackerai==0.6.50'],
         'only-gui': ['pyforms-gui'],
     },
     entry_points={
