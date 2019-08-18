@@ -1,7 +1,12 @@
 import os, subprocess, cv2, numpy as np, sys
+import glob
 from confapp import conf
 
+from PyQt5.QtWidgets import QApplication
+
 from idtrackerai.utils.segmentation_utils import segment_frame, blob_extractor
+from idtrackerai.postprocessing.individual_videos import generate_individual_videos
+from idtrackerai.postprocessing.trajectories_to_video import generate_trajectories_video
 
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlPlayer
@@ -14,19 +19,27 @@ from .gui.range_win import RangeWin
 
 class IdTrackerAiGUI(BaseIdTrackerAi):
 
+    INDIV_VIDEO_BTN_LABEL = 'Generate individual videos'
+    GEN_INDIV_VIDEO_BTN_LABEL = 'Generating individual videos...'
+    TRAJ_VIDEO_BTN_LABEL = 'Generate video with trajectories'
+    GEN_TRAJ_VIDEO_BTN_LABEL = 'Generate video with trajectories...'
+
     def __init__(self, *args, **kwargs):
 
-        self._player = ControlPlayer('Player', enabled=False, multiple_files=True)
-        self._togglegraph = ControlCheckBox('Segmented blobs info', changed_event=self.__toggle_graph_evt, enabled=False)
-        self._editpaths      = ControlButton('Validate trajectories', default=self.__open_videoannotator_evt, enabled=False)
-        self._pre_processing = ControlButton('Track video', default=self.track_video, enabled=False)
-        self._savebtn        = ControlButton('Save parameters', default=self.save_window, enabled=False)
+        self._player            = ControlPlayer('Player', enabled=False, multiple_files=True)
+        self._togglegraph       = ControlCheckBox('Segmented blobs info', changed_event=self.__toggle_graph_evt, enabled=False)
+        self._pre_processing    = ControlButton('Track video', default=self.track_video, enabled=False)
+        self._savebtn           = ControlButton('Save parameters', default=self.save_window, enabled=False)
 
-        self._polybtn = ControlButton('Polygon', checkable=True, enabled=False, default=self.polybtn_click_evt)
-        self._rectbtn = ControlButton('Rectangle', checkable=True, enabled=False)
-        self._circlebtn = ControlButton('Ellipse', checkable=True, enabled=False, default=self.circlebtn_click_evt)
+        self._polybtn           = ControlButton('Polygon', checkable=True, enabled=False, default=self.polybtn_click_evt)
+        self._rectbtn           = ControlButton('Rectangle', checkable=True, enabled=False)
+        self._circlebtn         = ControlButton('Ellipse', checkable=True, enabled=False, default=self.circlebtn_click_evt)
 
-        self._addrange = ControlButton('Add interval', default=self.__rangelst_add_evt, visible=False)
+        self._addrange          = ControlButton('Add interval', default=self.__rangelst_add_evt, visible=False)
+
+        self._indiv_videos      = ControlButton(self.INDIV_VIDEO_BTN_LABEL, default=self.__generate_individual_videos_evt, enabled=False)
+        self._traj_video        = ControlButton(self.TRAJ_VIDEO_BTN_LABEL, default=self.__generate_trajectories_video_evt, enabled=False)
+        self._validation         = ControlButton('Validate trajectories', default=self.__open_videoannotator_evt, enabled=False)
 
         self._graph = GraphAreaWin(parent_win=self)
 
@@ -45,7 +58,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             ('_applyroi', ' '),
             ('_rectbtn', '_polybtn', '_circlebtn', ' '),
             '_roi',
-            ('_no_ids', '_pre_processing', '_progress', '_editpaths')
+            ('_no_ids', '_pre_processing', '_progress', '_validation'),
+            ('_indiv_videos', '_traj_video', ' ')
         ]
 
         self._graph.on_draw = self.__graph_on_draw_evt
@@ -83,7 +97,9 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
     def set_controls_enabled(self, status):
         super().set_controls_enabled(status)
-        self._editpaths.enabled = status
+        self._validation.enabled = status
+        self._indiv_videos.enabled = status
+        self._traj_video.enabled = status
         self._pre_processing.enabled = status
         self._savebtn.enabled = status
         self._player.enabled = status
@@ -218,14 +234,24 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         blobs_path_1   = os.path.join(session_path, 'preprocessing', 'blobs_collection_no_gaps.npy')
         blobs_path_2   = os.path.join(session_path, 'preprocessing', 'blobs_collection.npy')
         vidobj_path    = os.path.join(session_path, 'video_object.npy')
+        trajs_wo_path  = os.path.join(session_path, 'trajectories_wo_gaps')
+        trajs_path  = os.path.join(session_path, 'trajectories')
 
         if os.path.exists(session_path) and \
                 (os.path.exists(blobs_path_1) or os.path.exists(blobs_path_2)) and \
                 os.path.exists(vidobj_path):
-            self._editpaths.enabled = True
-
+            self._validation.enabled = True
         else:
-            self._editpaths.enabled = False
+            self._validation.enabled = False
+
+        if os.path.exists(session_path) and \
+                (os.path.exists(trajs_path) or os.path.exists(trajs_wo_path)) and \
+                os.path.exists(vidobj_path):
+            self._indiv_videos.enabled = True
+            self._traj_video.enabled = True
+        else:
+            self._indiv_videos.enabled = False
+            self._traj_video.enabled = False
 
     def __update_progress_evt(self, progress_count, max_count=None):
         if max_count is not None:
@@ -245,7 +271,48 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         subprocess.Popen([sys.executable,'-m', 'pythonvideoannotator', session_path])
 
+    def __generate_individual_videos_evt(self):
+        self._indiv_videos.enabled = False
+        self._indiv_videos.label = self.GEN_INDIV_VIDEO_BTN_LABEL
+        QApplication.processEvents()
+        video_object, trajectories = get_video_object_and_trajectories(self.video_path, self._session.value)
+        generate_individual_videos(video_object, trajectories)
+        self._indiv_videos.enabled = True
+        self._indiv_videos.label = self.INDIV_VIDEO_BTN_LABEL
+        QApplication.processEvents()
+
+
+    def __generate_trajectories_video_evt(self):
+        self._traj_video.enabled = False
+        self._traj_video.label = self.GEN_TRAJ_VIDEO_BTN_LABEL
+        QApplication.processEvents()
+        video_object, trajectories = get_video_object_and_trajectories(self.video_path, self._session.value)
+        generate_trajectories_video(video_object, trajectories)
+        self._traj_video.enabled = True
+        self._traj_video.label = self.TRAJ_VIDEO_BTN_LABEL
+        QApplication.processEvents()
+
 
     @property
     def open_multiple_files(self):
         return self._player.multiple_files
+
+
+def get_video_object_and_trajectories(video_path, session_name):
+    video_folder   = os.path.dirname(video_path)
+    session_folder = "session_{0}".format(session_name)
+    session_path   = os.path.join(video_folder, session_folder)
+    trajs_wo_path  = os.path.join(session_path, 'trajectories_wo_gaps')
+    trajs_path  = os.path.join(session_path, 'trajectories')
+
+    video_object = np.load(os.path.join(session_path, 'video_object.npy'),
+                           allow_pickle=True).item()
+
+    if os.path.exists(trajs_wo_path):
+        trajectories_file = glob.glob(os.path.join(trajs_wo_path, '*'))[-1]
+    elif os.path.exists(trajs_path):
+        trajectories_file = glob.glob(os.path.join(trajs_path, '*'))[-1]
+
+    trajectories = np.load(trajectories_file, allow_pickle=True).item()['trajectories']
+
+    return video_object, trajectories
