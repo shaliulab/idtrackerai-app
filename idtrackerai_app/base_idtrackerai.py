@@ -171,6 +171,9 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
     def step1_pre_processing(self):
 
+        if not os.path.exists(self.video_path):
+            raise Exception("The video you are trying to track does not exist or the path to the video is wrong.")
+
         video_object = Video(
             video_path=self.video_path,
             open_multiple_files = self.open_multiple_files
