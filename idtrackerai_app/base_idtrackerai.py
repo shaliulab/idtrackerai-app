@@ -272,8 +272,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         pre.save_list_of_blobs_segmented()
         self._progress.value = 6
 
-        logger.debug('call: model_area_and_crossing_detector')
-        pre.model_area_and_crossing_detector()
+        logger.debug('call: compute_model_area_and_connect')
+        pre.compute_model_area_and_connect()
         self._progress.value = 7
 
         logger.debug('call: train_and_apply_crossing_detector')
