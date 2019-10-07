@@ -1,15 +1,6 @@
 import numpy as np, os, logging
 
-logger = logging.getLogger(__name__)
-
 from confapp import conf
-
-try:
-    
-    import local_settings
-    conf += local_settings
-except:
-    logger.info("Local settings file not available.")
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
@@ -34,30 +25,39 @@ from idtrackerai.tracker_api import TrackerAPI
 from idtrackerai.preprocessing_preview_api import PreprocessingPreviewAPI
 
 from .gui.roi_selection import ROISelectionWin
-
+from .gui.setup_points_selection import SetupInfoWin
+from .gui.player_win_interactions import PlayerWinInteractions
 
 from .helpers import Chosen_Video
 
 import tensorflow as tf
+
+
+logger = logging.getLogger(__name__)
+try:
+    import local_settings
+    conf += local_settings
+except:
+    logger.info("Local settings file not available.")
+
+
 with tf.Session() as sess:
-    logger.info( "TENSORFLOW DEVICES: "+str(sess.list_devices()) )
+    logger.info("TENSORFLOW DEVICES: "+str(sess.list_devices()))
 
 
-
-
-
-class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
+class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupInfoWin):
 
 
     def __init__(self, *args, **kwargs):
         BaseWidget.__init__(self, title='idtracker.ai')
         ROISelectionWin.__init__(self)
+        SetupInfoWin.__init__(self)
 
         self._session    = ControlText('Session', default='test')
         self._video      = ControlFile('Video')
         self._video_path = ControlFile('Video file. Note: overwrite the _video parameter defined in the json. Nice to have to execute the application in a cluster environment')
-        self._applyroi   = ControlCheckBox('Apply ROI', enabled=False)
 
+        self._applyroi   = ControlCheckBox('Apply ROI', enabled=False)
         self._roi       = ControlList('ROI', enabled=False, readonly=True, select_entire_row=True,
                                       item_selection_changed_event=self.roi_selection_changed_evt,
                                       remove_function=self.remove_roi)
@@ -75,7 +75,12 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self._rangelst  = ControlText( 'Tracking intervals', visible=False )
         self._multiple_range = ControlCheckBox('Multiple', enabled=False)
 
-        self._no_ids = ControlCheckBox('Track without identities')
+        self._no_ids    = ControlCheckBox('Track without identities')
+
+        self._add_setup_info = ControlCheckBox('Add setup info', enabled=False)
+        self._points_list = ControlList('Setup info', enabled=False, readonly=True, select_entire_row=True,
+                                      item_selection_changed_event=self.add_setup_info_changed_evt,
+                                      remove_function=self.remove_setup_info)
 
         self.formset = [
             ('_video','_session'),
@@ -84,14 +89,16 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
             '_area',
             ('_nblobs', '_resreduct', ' ', '_applyroi', '_chcksegm', '_bgsub'),
             '_roi',
-            ('_no_ids', '_progress')
+            ('_no_ids', '_progress'),
+            ('_add_setup_info', ' '),
+            '_points_list'
         ]
 
         self.load_order = [
-            '_session', '_video', '_range','_rangelst', '_multiple_range',
+            '_session', '_video', '_range', '_rangelst', '_multiple_range',
             '_intensity', '_area', '_nblobs',
-            '_resreduct', '_chcksegm', '_roi', '_no_ids',
-            '_bgsub'
+            '_resreduct', '_chcksegm', '_roi', '_no_ids', '_applyroi',
+            '_bgsub', '_add_setup_info', '_points_list'
         ]
 
         #self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
@@ -144,6 +151,8 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         self._multiple_range.enabled = status
         self._rangelst.enabled = status
         self._no_ids.enabled = status
+        self._add_setup_info.enabled = status
+        self._points_list.enabled = status
 
 
 
@@ -204,6 +213,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
         video_object._number_of_animals = int(self._nblobs.value)
         video_object._apply_ROI         = self._applyroi.value
         video_object._original_ROI      = self.create_mask(video_object.original_height, video_object.original_width)
+        video_object._setup_points     = self.create_setup_poitns_dict()
 
         video_object.resolution_reduction = self._resreduct.value
 

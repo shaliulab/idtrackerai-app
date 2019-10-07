@@ -32,8 +32,10 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._savebtn           = ControlButton('Save parameters', default=self.save_window, enabled=False)
 
         self._polybtn           = ControlButton('Polygon', checkable=True, enabled=False, default=self.polybtn_click_evt)
-        self._rectbtn           = ControlButton('Rectangle', checkable=True, enabled=False)
+        self._rectbtn           = ControlButton('Rectangle', checkable=True, enabled=False, default=self.rectbtn_click_evt)
         self._circlebtn         = ControlButton('Ellipse', checkable=True, enabled=False, default=self.circlebtn_click_evt)
+
+        self._add_points_btn = ControlButton('Add setup points', checkable=True, enabled=False, default=self.add_points_dict_click_evt)
 
         self._addrange          = ControlButton('Add interval', default=self.__rangelst_add_evt, visible=False)
 
@@ -59,11 +61,15 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             ('_rectbtn', '_polybtn', '_circlebtn', ' '),
             '_roi',
             ('_no_ids', '_pre_processing', '_progress', '_validation'),
-            ('_indiv_videos', '_traj_video', ' ')
+            ('_indiv_videos', '_traj_video', ' '),
+            ('_add_setup_info', ' '),
+            ('_add_points_btn', ' '),
+            '_points_list'
         ]
 
         self._graph.on_draw = self.__graph_on_draw_evt
         self._applyroi.changed_event = self.__apply_roi_changed_evt
+        self._add_setup_info.changed_event = self.__add_setup_info_changed_evt
         self._session.changed_event = self.__session_changed_evt
         self._player.drag_event = self.on_player_drag_in_video_window
         self._player.end_drag_event = self.on_player_end_drag_in_video_window
@@ -84,6 +90,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._multiple_range.form.setMaximumWidth(130)
 
         self.__apply_roi_changed_evt()
+        self.__add_setup_info_changed_evt()
         self.__session_changed_evt()
 
     def save_form(self, data={}, path=None):
@@ -108,6 +115,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._circlebtn.enabled = status
         self._togglegraph.enabled = status
         self._addrange.enabled = status
+
+        self._add_points_btn.enabled = status
 
 
     def process_frame_evt(self, frame):
@@ -145,6 +154,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         frame = cv2.resize(frame, original_size, interpolation=cv2.INTER_AREA)
 
         self.draw_rois(frame)
+        self.draw_points_list(frame)
         return frame
 
     def __resreduct_changed_evt(self):
@@ -226,6 +236,18 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             self._polybtn.hide()
             self._rectbtn.hide()
             self._circlebtn.hide()
+
+    def __add_setup_info_changed_evt(self):
+        """
+        Hide and show the controls to setup the background
+        """
+        if self._add_setup_info.value:
+            self._points_list.show()
+            self._add_points_btn.show()
+        else:
+            self._points_list.hide()
+            self._add_points_btn.hide()
+
 
     def __session_changed_evt(self):
         video_folder   = os.path.dirname(self.video_path)
