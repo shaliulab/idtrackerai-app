@@ -80,7 +80,7 @@ class SetupInfoWin(object):
                 else:
                     points = row
 
-                points_dict[points[0]] = points[1:]
+                points_dict[points[0]] = np.asarray(points[1:])
 
             return points_dict
         else:
