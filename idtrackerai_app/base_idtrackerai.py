@@ -30,8 +30,6 @@ from .gui.player_win_interactions import PlayerWinInteractions
 
 from .helpers import Chosen_Video
 
-import tensorflow as tf
-
 
 logger = logging.getLogger(__name__)
 try:
@@ -39,11 +37,6 @@ try:
     conf += local_settings
 except:
     logger.info("Local settings file not available.")
-
-
-with tf.Session() as sess:
-    logger.info("TENSORFLOW DEVICES: "+str(sess.list_devices()))
-
 
 class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupInfoWin):
 
