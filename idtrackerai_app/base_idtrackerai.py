@@ -47,6 +47,12 @@ with tf.Session() as sess:
 
 class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupInfoWin):
 
+    ERROR_MESSAGE_DEFAULT = "\n \nIf this error persists please open an issue at " \
+                            "https://gitlab.com/polavieja_lab/idtrackerai or " \
+                            "send an email to idtrackerai@gmail.com. " \
+                            "Check the log file idtrackerai-app.log in your " \
+                            "working directory and attach it to the issue."
+
 
     def __init__(self, *args, **kwargs):
         BaseWidget.__init__(self, title='idtracker.ai')
@@ -384,6 +390,14 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
         if label is not None: self._progress.label = label
 
         self._progress.value = value
+
+    def alert(self,     msg, title=None):
+        msg = msg + self.ERROR_MESSAGE_DEFAULT
+        self.message(msg, title, msg_type='error')
+
+    def critical(self,  msg, title=None):
+        msg = msg + self.ERROR_MESSAGE_DEFAULT
+        self.message(msg, title, msg_type='error')
 
     @property
     def open_multiple_files(self):
