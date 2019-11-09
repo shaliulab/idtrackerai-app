@@ -3,6 +3,7 @@ import glob
 from confapp import conf
 
 from PyQt5.QtWidgets import QApplication
+from AnyQt.QtWidgets import QMessageBox
 
 from idtrackerai.utils.segmentation_utils import segment_frame, blob_extractor
 from idtrackerai.postprocessing.individual_videos import generate_individual_videos
@@ -23,6 +24,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
     GEN_INDIV_VIDEO_BTN_LABEL = 'Generating individual videos...'
     TRAJ_VIDEO_BTN_LABEL = 'Generate video with trajectories'
     GEN_TRAJ_VIDEO_BTN_LABEL = 'Generate video with trajectories...'
+    FINAL_MESSAGE_DEFAULT = "idtracker.ai terminated."
 
     def __init__(self, *args, **kwargs):
 
@@ -39,7 +41,9 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self._indiv_videos      = ControlButton(self.INDIV_VIDEO_BTN_LABEL, default=self.__generate_individual_videos_evt, enabled=False)
         self._traj_video        = ControlButton(self.TRAJ_VIDEO_BTN_LABEL, default=self.__generate_trajectories_video_evt, enabled=False)
-        self._validation         = ControlButton('Validate trajectories', default=self.__open_videoannotator_evt, enabled=False)
+        self._validation        = ControlButton('Validate trajectories', default=self.__open_videoannotator_evt, enabled=False)
+
+        self._final_message     = self.FINAL_MESSAGE_DEFAULT
 
         self._graph = GraphAreaWin(parent_win=self)
 
@@ -92,7 +96,6 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
     def track_video(self):
         super().track_video()
-
         self.info(self._final_message, 'Ended')
 
     def set_controls_enabled(self, status):

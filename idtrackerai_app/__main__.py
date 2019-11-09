@@ -33,7 +33,7 @@ def start():
 
 
     try:
-        start_app( App, geometry=(100,100,800, 600) )
+        start_app( App, geometry=(100, 100, 800, 600) )
     except SystemExit:
         pass
     except Exception as e:
@@ -42,13 +42,6 @@ def start():
         import traceback
         ex_type, ex, tb = sys.exc_info()
         traceback.print_exception(ex_type, ex, tb)
-        print("\n")
-        print("idtracker.ai quit unexpectedly.")
-        print("If this error persists please open an issue at")
-        print("https://gitlab.com/polavieja_lab/idtrackerai")
-        print("or send an email to idtrackerai@gmail.com")
-        print("Check the log file idtrackerai-gui.log in")
-        print("your working directory and attach it to the issue.")
 
 
 #Execute the application
