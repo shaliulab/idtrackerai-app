@@ -67,7 +67,7 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
 
         self._intensity = ControlBoundingSlider('Intensity thresholds', default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT], min=conf.MIN_THRESHOLD, max=conf.MAX_THRESHOLD, enabled=False)
         self._area      = ControlBoundingSlider('Area thresholds', default=[conf.MIN_AREA_DEFAULT, conf.MAX_AREA_DEFAULT], min=conf.AREA_LOWER, max=conf.AREA_UPPER, enabled=False)
-        self._range     = ControlBoundingSlider('Tracking interval', default=[0,10], min=0, max=255, enabled=False) ###TODO: Change max of frames range to the number of frames of the video
+        self._range     = ControlBoundingSlider('Tracking interval', default=[0,508], min=0, max=255, enabled=False) ###TODO: Change max of frames range to the number of frames of the video
         self._nblobs    = ControlNumber('Number of animals', default=conf.NUMBER_OF_ANIMALS_DEFAULT, enabled=False)
         self._progress  = ControlProgress('Progress', enabled=False)
 
