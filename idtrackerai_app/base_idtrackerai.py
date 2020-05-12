@@ -126,9 +126,10 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
 
         if self._bgsub.value:
             if self.video_path:
-                video = Video( video_path=self.video_path, open_multiple_files=self.open_multiple_files )
+                video = Video(video_path=self.video_path, open_multiple_files=self.open_multiple_files )
                 video.get_info()
                 video._subtract_bkg = True
+                video._original_ROI = self.create_mask(video._original_height, video._original_width)
                 video._original_bkg = cumpute_background(video)
                 self._original_bkg = video.original_bkg
                 video.resolution_reduction = self._resreduct.value
