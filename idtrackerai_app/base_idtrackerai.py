@@ -183,6 +183,7 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
         if not os.path.exists(self.video_path):
             raise Exception("The video you are trying to track does not exist or the path to the video is wrong.")
 
+        # PREPARATION
         video_object = Video(
             video_path=self.video_path,
             open_multiple_files = self.open_multiple_files
@@ -208,11 +209,11 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
             video_object._tracking_interval = [self._range.value]
 
         video_object._video_folder      = os.path.dirname(self.video_path)
-        video_object._subtract_bkg      = self._bgsub.value
+        video_object._subtract_bkg      = self._bgsub.value  ## TODO: Check when the background is computed
         video_object._original_bkg      = self._original_bkg
         video_object._number_of_animals = int(self._nblobs.value)
         video_object._apply_ROI         = self._applyroi.value
-        video_object._original_ROI      = self.create_mask(video_object.original_height, video_object.original_width)
+        video_object._original_ROI      = self.create_mask(video_object.original_height, video_object.original_width)  ## TODO: This step is also done when computing the background model
         video_object._setup_points     = self.create_setup_poitns_dict()
 
         video_object.resolution_reduction = self._resreduct.value
@@ -226,6 +227,8 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
         logger.debug("create Chosen_Video")
         chosen_video = Chosen_Video(video=video_object)
         logger.debug("before init PreprocessingPreviewAPI")
+
+        # PREPROCESSING
         pre = PreprocessingPreviewAPI( chosen_video )
 
         logger.debug("pre object: "+str(pre))
@@ -233,11 +236,11 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
         self._progress.max = 9
 
         logger.debug('call: init_preview')
-        pre.init_preview()
+        pre.init_preview()  # TODO: Check whether this needs to be done here
         self._progress.value = 1
 
         logger.debug('call: init_preproc_parameters')
-        pre.init_preproc_parameters()
+        pre.init_preproc_parameters() # TODO: Already called in init_preview
         self._progress.value = 2
 
         logger.debug('call: segment')
@@ -294,6 +297,7 @@ class BaseIdTrackerAi(BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupI
         pre.generate_list_of_fragments_and_global_fragments()
         self._progress.value = 9
 
+        ### TODO: Remove this
         trainner = pre.crossing_detector_trainer
         list_of_fragments = pre.list_of_fragments
         list_of_global_fragments = pre.list_of_global_fragments
