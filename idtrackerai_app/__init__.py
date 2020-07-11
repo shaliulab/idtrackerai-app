@@ -1,4 +1,4 @@
-__version__ = '0.0.10-alpha'
+__version__ = '1.0.0-alpha'
 
 import locale
 

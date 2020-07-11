@@ -23,7 +23,7 @@ setup(
     extras_require={
         'gui':      ['pyforms-gui',
                      'python-video-annotator',
-                     'python-video-annotator-module-idtrackerai==0.6.64'],
+                     'python-video-annotator-module-idtrackerai==0.6.67'],
         'only-gui': ['pyforms-gui'],
     },
     entry_points={
