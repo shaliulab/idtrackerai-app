@@ -17,7 +17,7 @@ from .base_idtrackerai import BaseIdTrackerAi
 from .gui.grapharea_win import GraphAreaWin
 from .gui.range_win import RangeWin
 
-OLD_GUI_FORMSET = (
+NEW_GUI_FORMSET = (
     [
         ('_video', '_session', '_savebtn'),
         ('_nblobs', '_togglegraph', '_chcksegm', ' '),
@@ -31,7 +31,7 @@ OLD_GUI_FORMSET = (
     ],
     '_player',
     )
-NEW_GUI_FORMSET = [
+OLD_GUI_FORMSET = [
     ('_video', '_session', '_savebtn'),
     '_player',
     '=',
@@ -79,10 +79,10 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self.set_margin(10)
 
-        if not conf.OLD_GUI_LAYOUT:
-            self.formset = OLD_GUI_FORMSET
-        else:
+        if conf.NEW_GUI_LAYOUT:
             self.formset = NEW_GUI_FORMSET
+        else:
+            self.formset = OLD_GUI_FORMSET
 
         self._graph.on_draw = self.__graph_on_draw_evt
         self._applyroi.changed_event = self.__apply_roi_changed_evt
@@ -98,7 +98,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._multiple_range.changed_event = self.__multiple_range_changed_evt
         self._resreduct.changed_event = self.__resreduct_changed_evt
 
-        if not conf.OLD_GUI_LAYOUT:
+        if conf.NEW_GUI_LAYOUT:
             self.setMinimumHeight(conf.GUI_MINIMUM_HEIGHT)
             self.setMinimumWidth(conf.GUI_MINIMUM_WIDTH)
             self._player.setMinimumHeight(500)
