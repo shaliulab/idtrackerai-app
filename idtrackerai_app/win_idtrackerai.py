@@ -17,6 +17,34 @@ from .base_idtrackerai import BaseIdTrackerAi
 from .gui.grapharea_win import GraphAreaWin
 from .gui.range_win import RangeWin
 
+OLD_GUI_FORMSET = (
+    [
+        ('_video', '_session', '_savebtn'),
+        ('_nblobs', '_togglegraph', '_chcksegm', ' '),
+        ('_intensity', '_bgsub'),
+        ('_area', '_resreduct'),
+        ('_range', '_rangelst', '_addrange', '_multiple_range'),
+        ('_applyroi', ' '),
+        ('_rectbtn', '_polybtn', '_circlebtn', ' '),
+        '_roi',
+        ('_no_ids', '_pre_processing', '_progress', '_validation')
+    ],
+    '_player',
+    )
+NEW_GUI_FORMSET = [
+    ('_video', '_session', '_savebtn'),
+    '_player',
+    '=',
+    ('_nblobs', '_togglegraph', '_chcksegm', ' '),
+    ('_intensity', '_bgsub'),
+    ('_area', '_resreduct'),
+    ('_range', '_rangelst', '_addrange', '_multiple_range'),
+    ('_applyroi', ' '),
+    ('_rectbtn', '_polybtn', '_circlebtn', ' '),
+    '_roi',
+    ('_no_ids', '_pre_processing', '_progress', '_validation')
+            ]
+
 
 class IdTrackerAiGUI(BaseIdTrackerAi):
 
@@ -51,20 +79,10 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self.set_margin(10)
 
-        self.formset = [
-            ('_video', '_session', '_savebtn'),
-            '_player',
-            '=',
-            ('_nblobs', '_togglegraph', '_chcksegm', ' '),
-            ('_intensity', '_bgsub'),
-            ('_area', '_resreduct'),
-            ('_range', '_rangelst', '_addrange', '_multiple_range'),
-            ('_applyroi', ' '),
-            ('_rectbtn', '_polybtn', '_circlebtn', ' '),
-            '_roi',
-            ('_no_ids', '_pre_processing', '_progress', '_validation'),
-            ('_indiv_videos', '_traj_video', ' ')
-        ]
+        if not conf.OLD_GUI_LAYOUT:
+            self.formset = OLD_GUI_FORMSET
+        else:
+            self.formset = NEW_GUI_FORMSET
 
         self._graph.on_draw = self.__graph_on_draw_evt
         self._applyroi.changed_event = self.__apply_roi_changed_evt
@@ -80,8 +98,14 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._multiple_range.changed_event = self.__multiple_range_changed_evt
         self._resreduct.changed_event = self.__resreduct_changed_evt
 
-        self.setMinimumHeight(900)
-        self._player.setMinimumHeight(300)
+        if not conf.OLD_GUI_LAYOUT:
+            self.setMinimumHeight(conf.GUI_MINIMUM_HEIGHT)
+            self.setMinimumWidth(conf.GUI_MINIMUM_WIDTH)
+            self._player.setMinimumHeight(500)
+            self._player.setMinimumWidth(500)
+        else:
+            self.setMinimumHeight(900)
+            self._player.setMinimumHeight(300)
         self._togglegraph.form.setMaximumWidth(180)
         self._roi.setMaximumHeight(100)
         self._session.form.setMaximumWidth(250)
