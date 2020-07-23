@@ -10,7 +10,7 @@ class Chosen_Video(object):
         self.list_of_global_fragments = kwargs.get('list_of_global_fragments', None)
 
         if self.video.blobs_path is not None and os.path.exists(self.video.blobs_path):
-            self.list_of_blobs = ListOfBlobs.load(self.video, self.video.blobs_path)
+            self.list_of_blobs = ListOfBlobs.load(self.video.blobs_path)
         else:
             self.list_of_blobs = None
 
