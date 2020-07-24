@@ -17,7 +17,6 @@ from .base_idtrackerai import BaseIdTrackerAi
 from .gui.grapharea_win import GraphAreaWin
 from .gui.range_win import RangeWin
 
-
 class IdTrackerAiGUI(BaseIdTrackerAi):
 
     INDIV_VIDEO_BTN_LABEL = 'Generate individual videos'
@@ -53,23 +52,25 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self.set_margin(10)
 
-        self.formset = [
-            ('_video', '_session', '_savebtn'),
-            '_player',
-            '=',
+        self.formset = (
+            [
+            ('_video', '_resreduct', ' '),
             ('_nblobs', '_togglegraph', '_chcksegm', ' '),
-            ('_intensity', '_bgsub'),
-            ('_area', '_resreduct'),
-            ('_range', '_rangelst', '_addrange', '_multiple_range'),
-            ('_applyroi', ' '),
+            '_intensity',
+            '_area',
+            ('_applyroi', '_bgsub', ' '),
             ('_rectbtn', '_polybtn', '_circlebtn', ' '),
             '_roi',
-            ('_no_ids', '_pre_processing', '_progress', '_validation'),
-            ('_indiv_videos', '_traj_video', ' '),
+            ('_range', '_rangelst', '_addrange', '_multiple_range'),
             ('_add_setup_info', ' '),
             ('_add_points_btn', ' '),
-            '_points_list'
-        ]
+            '_points_list',
+            ('_session', '_savebtn', ' '),
+            ('_no_ids', '_pre_processing', '_progress'),
+            ('_validation', '_traj_video', '_indiv_videos', ' '),
+            ],
+            '_player',
+        )
 
         self._graph.on_draw = self.__graph_on_draw_evt
         self._applyroi.changed_event = self.__apply_roi_changed_evt
@@ -86,8 +87,11 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._multiple_range.changed_event = self.__multiple_range_changed_evt
         self._resreduct.changed_event = self.__resreduct_changed_evt
 
-        self.setMinimumHeight(900)
+        self.setMinimumHeight(conf.GUI_MINIMUM_HEIGHT)
+        self.setMinimumWidth(conf.GUI_MINIMUM_WIDTH)
+        self._video.form.setMinimumWidth(300)
         self._player.setMinimumHeight(300)
+        self._player.setMinimumWidth(300)
         self._togglegraph.form.setMaximumWidth(180)
         self._roi.setMaximumHeight(100)
         self._session.form.setMaximumWidth(250)
