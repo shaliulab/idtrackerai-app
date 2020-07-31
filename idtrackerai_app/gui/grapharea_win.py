@@ -1,14 +1,16 @@
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlMatplotlib
 
+
 class GraphAreaWin(BaseWidget):
-
     def __init__(self, *args, **kwargs):
-        super().__init__(title='Area graph')
+        super().__init__(title="Area graph")
 
-        self._graph = ControlMatplotlib('Blobs area', toolbar=False, enabled=False)
+        self._graph = ControlMatplotlib(
+            "Blobs area", toolbar=False, enabled=False
+        )
 
-        self.formset = ['_graph']
+        self.formset = ["_graph"]
 
     @property
     def enabled(self):
