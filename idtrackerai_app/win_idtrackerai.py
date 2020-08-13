@@ -4,6 +4,7 @@ from confapp import conf
 
 from PyQt5.QtWidgets import QApplication
 from AnyQt.QtWidgets import QMessageBox
+from scipy import ndimage  # TODO: used to fill binary holes see below
 
 from idtrackerai.utils.segmentation_utils import (
     segment_frame,
@@ -215,6 +216,10 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             self._background_img,
             mask,
             self._bgsub.value,
+        )
+        # # Fill holes in the segmented frame to avoid duplication of contours
+        bin_frame = ndimage.binary_fill_holes(bin_frame).astype(
+            "uint8"
         )
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(
             bin_frame.copy(), frame, int(min_area), int(max_area)
