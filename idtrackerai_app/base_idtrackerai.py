@@ -13,7 +13,7 @@ from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
 from idtrackerai.utils.segmentation_utils import cumpute_background
-from idtrackerai.utils.py_utils import getExistentFiles
+from idtrackerai.utils.py_utils import get_computed_processes
 from idtrackerai.constants import PROCESSES
 
 from idtrackerai.list_of_fragments import ListOfFragments
@@ -22,7 +22,7 @@ from idtrackerai.list_of_global_fragments import ListOfGlobalFragments
 from idtrackerai.video import Video
 
 from idtrackerai.tracker_api import TrackerAPI
-from idtrackerai.preprocessing_preview_api import PreprocessingPreviewAPI
+from idtrackerai.preprocessing_api import PreprocessingAPI
 
 from .gui.roi_selection import ROISelectionWin
 from .gui.setup_points_selection import SetupInfoWin
@@ -50,6 +50,10 @@ class BaseIdTrackerAi(
         "send an email to idtrackerai@gmail.com. "
         "Check the log file idtrackerai-app.log in your "
         "working directory and attach it to the issue."
+    )
+
+    SEGMENTATION_CHECK_FINAL_MESSAGE = (
+        "Readjust the segmentation parameters and track the video again."
     )
 
     def __init__(self, *args, **kwargs):
@@ -196,7 +200,7 @@ class BaseIdTrackerAi(
                     video_path=self.video_path,
                     open_multiple_files=self.open_multiple_files,
                 )
-                video.get_info()
+                video.get_info_from_video_file()
                 video._subtract_bkg = True
                 video._original_ROI = self.create_mask(
                     video._original_height, video._original_width
@@ -232,12 +236,18 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(False)
 
         try:
-            if self.step1_pre_processing():
-                if self._no_ids.value:
-                    self.step2_wo_tracking()
-                else:
-                    self.step2_tracking()
+            # Init tracking manager (chosen_video)
+            chosen_video = self.step0_init()
+
+            # Preprocessing
+            success_preprocessing = self.step1_pre_processing(chosen_video)
+            if success_preprocessing:
+                # Training and identification
+                self.step2_tracking(chosen_video)
+                # Post processing
+
         except Exception as e:
+            chosen_video.save()
             logger.error(e, exc_info=True)
             self.critical(str(e), "Error")
 
@@ -245,19 +255,23 @@ class BaseIdTrackerAi(
         self._session.enabled = True
         self.set_controls_enabled(True)
 
-    def step1_pre_processing(self):
+    def step0_init(self):
 
         if not os.path.exists(self.video_path):
             raise Exception(
                 "The video you are trying to track does not exist or the path to the video is wrong."
             )
 
-        # PREPARATION
+        # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
+        logger.info("START: INIT VIDEO OBJECT")
         video_object = Video(
             video_path=self.video_path,
             open_multiple_files=self.open_multiple_files,
         )
-        video_object.get_info()
+        video_object._video_folder = os.path.dirname(self.video_path)
+
+        # Gets video with, height frames per second from the video file.
+        video_object.get_info_from_video_file()
 
         # define the thresholds ranges
         video_object._min_threshold = self._intensity.value[0]
@@ -286,59 +300,63 @@ class BaseIdTrackerAi(
         video_object._apply_ROI = self._applyroi.value
         video_object._original_ROI = self.create_mask(
             video_object.original_height, video_object.original_width
-        )  ## TODO: This step is also done when computing the background model
+        )
+        # TODO: Improve this, it is a bit obscure
+        # Needs to be done after _original_ROI is set since the resolution_reduction
+        # setter changes the size of the _ROI attribute based on the _original_ROI
+        video_object.resolution_reduction = self._resreduct.value
+        video_object._track_wo_identities = self._no_ids.value
+        ## TODO: This step is also done when computing the background model
         video_object._setup_points = self.create_setup_poitns_dict()
 
-        video_object.resolution_reduction = self._resreduct.value
+        # Finished reading preprocessing parameters
+        video_object._has_preprocessing_parameters = True
 
-        # Check if it is identity transfer or knowledge_transfer
         if conf.IDENTITY_TRANSFER:
             video_object.check_and_set_identity_transfer_if_possible()
+
+        if conf.KNOWLEDGE_TRANSFER_FOLDER_IDCNN:
+            video_object._tracking_with_knowledge_transfer = True
+        else:
+            video_object._tracking_with_knowledge_transfer = False
+
 
         video_object.create_session_folder(self._session.value)
 
         logger.debug("create Chosen_Video")
         chosen_video = Chosen_Video(video=video_object)
-        logger.debug("before init PreprocessingPreviewAPI")
+        logger.info("FINISH: INIT VIDEO OBJECT")
 
-        # PREPROCESSING
-        pre = PreprocessingPreviewAPI(chosen_video)
+        # TODO: Uncomment to start developping restoring (tracking will fail)
+        # (
+        #     chosen_video.processes_to_restore,
+        #     chosen_video.old_video,
+        # ) = get_computed_processes(chosen_video.video, PROCESSES)
+        # logger.info(
+        #     f"Processes to restore: {chosen_video.processes_to_restore}"
+        # )
+        return chosen_video
 
-        logger.debug("pre object: " + str(pre))
+    def step1_pre_processing(self, chosen_video):
 
+        logger.debug("before init PreprocessingAPI")
         self._progress.max = 9
 
-        logger.debug("call: init_preview")
-        pre.init_preview()  # TODO: Check whether this needs to be done here
+        # PREPROCESSING
+        pre = PreprocessingAPI(chosen_video)
         self._progress.value = 1
 
-        logger.debug("call: init_preproc_parameters")
-        pre.init_preproc_parameters()  # TODO: Already called in init_preview
+        # START: ANIMAL DETECTION
+        logger.info("START: ANIMAL DETECTION")
+        pre.detect_animals()
         self._progress.value = 2
-
-        logger.debug("call: segment")
-        pre.segment(
-            self._intensity.value[0],
-            self._intensity.value[1],
-            self._area.value[0],
-            self._area.value[1],
-        )
-        self._progress.value = 3
-
-        video_object.create_images_folders()  # for ram optimization
-        logger.debug("call: compute_list_of_blobs")
-        pre.compute_list_of_blobs()
-        self._progress.value = 4
-
-        logger.debug("call: check_segmentation_consistency")
-
-        if self._chcksegm.value and not pre.check_segmentation_consistency():
-            outfile_path = os.path.join(
-                video_object.session_folder, "inconsistent_frames.csv"
-            )
-
+        # Check segmentation consistency
+        segmentation_consistent = pre.check_segmentation_consistency()
+        if self._chcksegm.value and not segmentation_consistent:
+            outfile_path = pre.save_inconsistent_frames()
             self.warning(
-                "On some frames it was found more blobs than animals, "
+                "On some frames it was found more blobs than "
+                "animals, "
                 "you can find the index of these frames in the file:"
                 "<p>{0}</p>"
                 "<p>Please readjust the segmentation parameters and press 'Track video' again.</p>".format(
@@ -346,47 +364,39 @@ class BaseIdTrackerAi(
                 ),
                 "Found more blobs than animals",
             )
-            with open(outfile_path, "w") as outfile:
-                outfile.write(
-                    "\n".join(
-                        map(
-                            str,
-                            pre.chosen_video.video.frames_with_more_blobs_than_animals,
-                        )
-                    )
-                )
-
             self._progress.value = 0
-            self._final_message = "Readjust the segmentation parameters and track the video again."
+            self._final_message = self.SEGMENTATION_CHECK_FINAL_MESSAGE
             return False
-
-        self._progress.value = 5
-
-        logger.debug("call: save_list_of_blobs_segmented")
+        self._progress.value = 3
+        # Save list of blobs
         pre.save_list_of_blobs_segmented()
+        self._progress.value = 4
+        # FINISH: ANIMAL DETECTION
+        logger.info("FINISH: ANIMAL DETECTION")
+
+        # START: CROSSING DETECTION
+        logger.info("START: CROSSING DETECTION")
+        pre.compute_model_area()
+        self._progress.value = 5
+        pre.set_identification_images()
         self._progress.value = 6
-
-        logger.debug("call: compute_model_area_and_connect")
-        pre.compute_model_area_and_connect()
+        pre.connect_list_of_blobs()
         self._progress.value = 7
-
         logger.debug("call: train_and_apply_crossing_detector")
         pre.train_and_apply_crossing_detector()
         self._progress.value = 8
+        # FINISH: CROSSING DETECTION
+        logger.info("FINISH: CROSSING DETECTION")
 
-        logger.debug("call: generate_list_of_fragments_and_global_fragments")
+        # START: FRAGMENTATION
+        logger.info("START: FRAGMENTATION")
         pre.generate_list_of_fragments_and_global_fragments()
         self._progress.value = 9
-
-        ### TODO: Remove this
-        trainner = pre.crossing_detector_trainer
-        list_of_fragments = pre.list_of_fragments
-        list_of_global_fragments = pre.list_of_global_fragments
-
+        # FINISH: FRAGMENTATION
+        logger.info("FINISH: FRAGMENTATION")
         return True
 
-    def step2_tracking(self):
-
+    def reinit_chosen_video(self):
         video_folder = os.path.dirname(self.video_path)
         session_folder = "session_{0}".format(self._session.value)
 
@@ -425,68 +435,53 @@ class BaseIdTrackerAi(
             chosen_video.video, PROCESSES
         )
 
+    def step2_tracking(self, chosen_video=None):
+
         tracker = TrackerAPI(chosen_video)
 
-        tracker.start_tracking()
-
-        if video_object.number_of_animals != 1:
-            list_of_fragments.update_identification_images_dataset()
-
-        logger.info("Estimated accuracy: {}".format(video_object.overall_P2))
-
-        video_object.delete_data()
-
-        self._final_message = "Tracking finished with {0:.2f} estimated accuracy.".format(
-            video_object.overall_P2 * 100
-        )
-
-    def step2_wo_tracking(self):
-
-        video_folder = os.path.dirname(self.video_path)
-        session_folder = "session_{0}".format(self._session.value)
-
-        videoobj_filepath = os.path.join(
-            video_folder, session_folder, "video_object.npy"
-        )
-        fragments_filepath = os.path.join(
-            video_folder, session_folder, "preprocessing", "fragments.npy"
-        )
-        gfragments_filepath = os.path.join(
-            video_folder,
-            session_folder,
-            "preprocessing",
-            "global_fragments.npy",
-        )
-
-        video_object = np.load(videoobj_filepath, allow_pickle=True).item()
-        video_object.create_session_folder(self._session.value)
-
-        if video_object.number_of_animals != 1:
-            list_of_fragments = ListOfFragments.load(fragments_filepath)
-            list_of_global_fragments = ListOfGlobalFragments.load(
-                gfragments_filepath, list_of_fragments.fragments
+        if chosen_video.video.track_wo_identities:
+            # START: FRAGMENTATION
+            logger.info("START: TRACKING WITHOUT IDENTITIES")
+            tracker.track_wo_identities()
+            logger.info("FINISH: TRACKING WITHOUT IDENTITIES")
+            self._final_message = (
+                "Tracking without identities finished. "
+                "No estimated accuracy computed."
             )
         else:
-            list_of_fragments = None
-            list_of_global_fragments = None
+            if chosen_video.video.number_of_animals == 1:
+                logger.info("START: TRACKING SINGLE ANIMAL")
+                tracker.track_single_animal()
+                logger.info("FINISH: TRACKING SINGLE ANIMAL")
 
-        chosen_video = Chosen_Video(
-            video=video_object,
-            list_of_fragments=list_of_fragments,
-            list_of_global_fragments=list_of_global_fragments,
-        )
+            else:
+                if (
+                    chosen_video.list_of_global_fragments.number_of_global_fragments
+                    == 1
+                ):
+                    logger.info("START: TRACKING SINGLE GLOBAL FRAGMENT")
+                    tracker.track_single_global_fragment_video()
+                    logger.info("FINISH: TRACKING SINGLE GLOBAL FRAGMENT")
 
-        chosen_video.existent_files, chosen_video.old_video = getExistentFiles(
-            chosen_video.video, PROCESSES
-        )
+                else:
+                    logger.info("START: TRACKING")
+                    tracker.track_multiple_global_fragments()
+                    logger.info("FINISH: TRACKING")
 
-        tracker = TrackerAPI(chosen_video)
+                chosen_video.list_of_fragments.update_identification_images_dataset()
 
-        tracker.track_wo_identities()
+            logger.info(
+                "Estimated accuracy: {}".format(chosen_video.video.overall_P2)
+            )
 
-        video_object.delete_data()
+            chosen_video.video.delete_data()
 
-        self._final_message = "Tracking without identities finished. No estimated accuracy computed."
+            self._final_message = (
+                "Tracking finished with {0:.2f} "
+                "estimated accuracy.".format(
+                    chosen_video.video.overall_P2 * 100
+                )
+            )
 
     def __update_progress(self, value, label=None, total=None):
 
