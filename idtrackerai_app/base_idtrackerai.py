@@ -465,7 +465,7 @@ class BaseIdTrackerAi(
 
                 else:
                     logger.info("START: TRACKING")
-                    tracker.track_multiple_global_fragments()
+                    tracker.track_w_identities()
                     logger.info("FINISH: TRACKING")
 
                 chosen_video.list_of_fragments.update_identification_images_dataset()
