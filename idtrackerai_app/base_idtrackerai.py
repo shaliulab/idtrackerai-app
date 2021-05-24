@@ -320,7 +320,6 @@ class BaseIdTrackerAi(
         else:
             video_object._tracking_with_knowledge_transfer = False
 
-
         video_object.create_session_folder(self._session.value)
 
         logger.debug("create Chosen_Video")
