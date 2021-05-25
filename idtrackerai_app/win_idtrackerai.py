@@ -30,7 +30,7 @@ from .gui.range_win import RangeWin
 NEW_GUI_FORMSET = (
     [
         ("_video", "_session", "_savebtn"),
-        ("_nblobs", "_togglegraph", "_chcksegm", " "),
+        ("_nblobs", "_toggle_blobs_area_info", "_chcksegm", " "),
         ("_intensity", "_bgsub"),
         ("_area", "_resreduct"),
         ("_range", "_rangelst", "_addrange", "_multiple_range"),
@@ -46,7 +46,7 @@ OLD_GUI_FORMSET = [
     ("_video", "_session", "_savebtn"),
     "_player",
     "=",
-    ("_nblobs", "_togglegraph", "_chcksegm", " "),
+    ("_nblobs", "_toggle_blobs_area_info", "_chcksegm", " "),
     ("_intensity", "_bgsub"),
     ("_area", "_resreduct"),
     ("_range", "_rangelst", "_addrange", "_multiple_range"),
@@ -71,7 +71,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._player = ControlPlayer(
             "Player", enabled=False, multiple_files=True
         )
-        self._togglegraph = ControlCheckBox(
+        self._toggle_blobs_area_info = ControlCheckBox(
             "Segmented blobs info",
             changed_event=self.__toggle_graph_evt,
             enabled=False,
@@ -140,7 +140,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self.formset = (
             [
                 ("_video", "_resreduct", " "),
-                ("_nblobs", "_togglegraph", "_chcksegm", " "),
+                ("_nblobs", "_toggle_blobs_area_info", "_chcksegm", " "),
                 "_intensity",
                 "_area",
                 ("_applyroi", "_bgsub", " "),
@@ -179,7 +179,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._video.form.setMinimumWidth(300)
         self._player.setMinimumHeight(300)
         self._player.setMinimumWidth(300)
-        self._togglegraph.form.setMaximumWidth(180)
+        self._toggle_blobs_area_info.form.setMaximumWidth(180)
         self._roi.setMaximumHeight(100)
         self._session.form.setMaximumWidth(250)
         self._multiple_range.form.setMaximumWidth(130)
@@ -207,7 +207,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._polybtn.enabled = status
         self._rectbtn.enabled = status
         self._circlebtn.enabled = status
-        self._togglegraph.enabled = status
+        self._toggle_blobs_area_info.enabled = status
         self._addrange.enabled = status
 
         self._add_points_btn.enabled = status
@@ -217,51 +217,53 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         Function called before an image is shown in the player.
         It does the pre-visualization segmentation and ROIs selection.
         """
-        min_thresh, max_thresh = self._intensity.value
-        min_area, max_area = self._area.value
-
+        # Save original shape to rescale if resolution reduction is applied
         original_size = frame.shape[1], frame.shape[0]
-        reduction = self._resreduct.value
-        frame = cv2.resize(
-            frame,
-            None,
-            fx=reduction,
-            fy=reduction,
-            interpolation=cv2.INTER_AREA,
-        )
-
-        # Convert the frame to black & white
+        # Apply resolution reduction
+        if self._resreduct.value != 1:
+            frame = cv2.resize(
+                frame,
+                None,
+                fx=self._resreduct.value,
+                fy=self._resreduct.value,
+                interpolation=cv2.INTER_AREA,
+            )
+        # Convert the frame to gray scale
         gray = to_gray_scale(frame)
+        # Create mask from ROI
         mask = self.create_mask(*gray.shape)
-        av_intensity = get_frame_average_intensity(gray, mask)
-        av_frame = gray / av_intensity
-
+        # Normalize frame
+        normalized_framed = gray / get_frame_average_intensity(gray, mask)
+        # Binarize frame
         bin_frame = segment_frame(
-            av_frame,
-            min_thresh,
-            max_thresh,
+            normalized_framed,
+            self._intensity.value[0],
+            self._intensity.value[1],
             self._background_img,
             mask,
             self._bgsub.value,
         )
-        # # Fill holes in the segmented frame to avoid duplication of contours
+        # Fill holes in the segmented frame to avoid duplication of contours
         bin_frame = ndimage.binary_fill_holes(bin_frame).astype("uint8")
+        # Extract blobs
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(
-            bin_frame.copy(), frame, int(min_area), int(max_area)
+            bin_frame.copy(),
+            frame,
+            int(self._area.value[0]),
+            int(self._area.value[1]),
         )
+        # Save detected areas to plot the bar plot of the blobs size in pixels
         self._detected_areas = areas
-        # if self._nblobs.value<len(areas):
-        #    self._nblobs.value = len(areas)
-
-        cv2.drawContours(frame, good_cnt, -1, color=(0, 0, 255), thickness=-1)
-
-        if conf.PYFORMS_MODE == "GUI" and self._togglegraph.value:
+        # Update graph with areas of seglemted blobs
+        if conf.PYFORMS_MODE == "GUI" and self._toggle_blobs_area_info.value:
             self._graph.draw()
-
-        # The resize to the original size is required because of the draw of the ROI.
+        # Draw detected blobs in frame
+        cv2.drawContours(frame, good_cnt, -1, color=(0, 0, 255), thickness=-1)
+        # Resize to original size (ROI and setup points are in original size)
         frame = cv2.resize(frame, original_size, interpolation=cv2.INTER_AREA)
-
+        # Draw ROIs in frame
         self.draw_rois(frame)
+        # Draw setup points in frame
         self.draw_points_list(frame)
         return frame
 
@@ -310,7 +312,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._player.refresh()
 
     def __toggle_graph_evt(self):
-        if self._togglegraph.value:
+        if self._toggle_blobs_area_info.value:
             self._graph.show()
         else:
             self._graph.hide()
