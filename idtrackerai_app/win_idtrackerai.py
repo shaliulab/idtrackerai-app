@@ -324,7 +324,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         if not areas:
             return
-
+        figure.gca().remove()
         axes = figure.add_subplot(111)
         axes.clear()
         axes.bar(range(1, len(areas) + 1), areas, 0.5)
