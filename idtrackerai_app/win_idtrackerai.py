@@ -11,6 +11,7 @@ from idtrackerai.utils.segmentation_utils import (
     blob_extractor,
     get_frame_average_intensity,
     to_gray_scale,
+    gaussian_blur,
 )
 from idtrackerai.postprocessing.individual_videos import (
     generate_individual_videos,
@@ -219,6 +220,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         """
         # Save original shape to rescale if resolution reduction is applied
         original_size = frame.shape[1], frame.shape[0]
+        frame = gaussian_blur(frame, sigma=conf.SIGMA_GAUSSIAN_BLURRING)
         # Apply resolution reduction
         if self._resreduct.value != 1:
             frame = cv2.resize(
