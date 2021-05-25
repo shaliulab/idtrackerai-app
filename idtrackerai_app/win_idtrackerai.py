@@ -248,9 +248,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             self._bgsub.value,
         )
         # # Fill holes in the segmented frame to avoid duplication of contours
-        bin_frame = ndimage.binary_fill_holes(bin_frame).astype(
-            "uint8"
-        )
+        bin_frame = ndimage.binary_fill_holes(bin_frame).astype("uint8")
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(
             bin_frame.copy(), frame, int(min_area), int(max_area)
         )
