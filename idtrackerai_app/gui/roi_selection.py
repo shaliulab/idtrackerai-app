@@ -54,10 +54,10 @@ class ROISelectionWin(object):
                 if len(points) < 3:
                     continue
                 mask = cv2.fillPoly(
-                    mask, [np.array(points, np.int32)], (255, 255, 255)
+                    mask, [np.array(points, np.int32)], (1, 1, 1)
                 )
         else:
-            mask = mask + 255
+            mask = mask + 1
         return mask
 
     def roi_selection_changed_evt(self):
