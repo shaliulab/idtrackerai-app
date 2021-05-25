@@ -10,6 +10,7 @@ from idtrackerai.utils.segmentation_utils import (
     segment_frame,
     blob_extractor,
     get_frame_average_intensity,
+    to_gray_scale,
 )
 from idtrackerai.postprocessing.individual_videos import (
     generate_individual_videos,
@@ -230,11 +231,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         )
 
         # Convert the frame to black & white
-        gray = (
-            cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-            if len(frame.shape) > 2
-            else frame
-        )
+        gray = to_gray_scale(frame)
         mask = self.create_mask(*gray.shape)
         av_intensity = get_frame_average_intensity(gray, mask)
         av_frame = gray / av_intensity
