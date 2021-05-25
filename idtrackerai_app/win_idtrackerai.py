@@ -26,6 +26,36 @@ from .base_idtrackerai import BaseIdTrackerAi
 from .gui.grapharea_win import GraphAreaWin
 from .gui.range_win import RangeWin
 
+NEW_GUI_FORMSET = (
+    [
+        ("_video", "_session", "_savebtn"),
+        ("_nblobs", "_togglegraph", "_chcksegm", " "),
+        ("_intensity", "_bgsub"),
+        ("_area", "_resreduct"),
+        ("_range", "_rangelst", "_addrange", "_multiple_range"),
+        ("_applyroi", " "),
+        ("_rectbtn", "_polybtn", "_circlebtn", " "),
+        "_roi",
+        ("_no_ids", "_pre_processing", "_progress", "_validation"),
+        ("_indiv_videos", "_traj_video", " "),
+    ],
+    "_player",
+)
+OLD_GUI_FORMSET = [
+    ("_video", "_session", "_savebtn"),
+    "_player",
+    "=",
+    ("_nblobs", "_togglegraph", "_chcksegm", " "),
+    ("_intensity", "_bgsub"),
+    ("_area", "_resreduct"),
+    ("_range", "_rangelst", "_addrange", "_multiple_range"),
+    ("_applyroi", " "),
+    ("_rectbtn", "_polybtn", "_circlebtn", " "),
+    "_roi",
+    ("_no_ids", "_pre_processing", "_progress", "_validation"),
+    ("_indiv_videos", "_traj_video", " "),
+]
+
 
 class IdTrackerAiGUI(BaseIdTrackerAi):
 
