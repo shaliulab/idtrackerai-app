@@ -12,7 +12,7 @@ from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
-from idtrackerai.utils.segmentation_utils import cumpute_background
+from idtrackerai.utils.segmentation_utils import compute_background
 from idtrackerai.utils.py_utils import get_computed_processes
 from idtrackerai.constants import PROCESSES
 
@@ -170,13 +170,6 @@ class BaseIdTrackerAi(
             "_points_list",
         ]
 
-        # self._video.value = '/home/ricardo/bitbucket/idtracker-project/idtrackerai_video_example.avi'
-
-        self.bgsub_changed_evt()
-
-        # self._resreduct.value = 0.3
-        # self._area.value = [5, 50]
-
         # store the computed background with the correct resolution reduction
         self._background_img = None
         # store the computed background with the original size
@@ -194,7 +187,11 @@ class BaseIdTrackerAi(
 
     def bgsub_changed_evt(self):
 
-        if self._bgsub.value:
+        if not hasattr(self, "_args") and self._bgsub.value:
+            # If is an instance from the GUI and bgsub is checked
+            # (when tracking from the GUI the BaseWidgest has not attribute
+            # _args. When tracking with terminal_mode it has attrubit "_args"
+            # and we compute the background in self.step0_init
             if self.video_path:
                 video = Video(
                     video_path=self.video_path,
@@ -205,7 +202,7 @@ class BaseIdTrackerAi(
                 video._original_ROI = self.create_mask(
                     video._original_height, video._original_width
                 )
-                video._original_bkg = cumpute_background(video)
+                video._original_bkg = compute_background(video)
                 self._original_bkg = video.original_bkg
                 video.resolution_reduction = self._resreduct.value
                 self._background_img = video.bkg
@@ -230,7 +227,7 @@ class BaseIdTrackerAi(
         self._points_list.enabled = status
 
     def track_video(self):
-
+        logger.info("Calling track_video")
         self._video.enabled = False
         self._session.enabled = False
         self.set_controls_enabled(False)
@@ -247,7 +244,8 @@ class BaseIdTrackerAi(
                 # Post processing
 
         except Exception as e:
-            chosen_video.save()
+            if "chosen_video" in locals():
+                chosen_video.save()
             logger.error(e, exc_info=True)
             self.critical(str(e), "Error")
 
@@ -259,7 +257,8 @@ class BaseIdTrackerAi(
 
         if not os.path.exists(self.video_path):
             raise Exception(
-                "The video you are trying to track does not exist or the path to the video is wrong."
+                "The video you are trying to track does not exist or the "
+                f"path to the video is wrong: {self.video_path}"
             )
 
         # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
@@ -292,21 +291,35 @@ class BaseIdTrackerAi(
             video_object._tracking_interval = [self._range.value]
 
         video_object._video_folder = os.path.dirname(self.video_path)
-        video_object._subtract_bkg = (
-            self._bgsub.value
-        )  ## TODO: Check when the background is computed
-        video_object._original_bkg = self._original_bkg
         video_object._number_of_animals = int(self._nblobs.value)
         video_object._apply_ROI = self._applyroi.value
+        # Computation of mask needs to come before background model
+        # because in the computation of the background model frames are
+        # normalized the frames considering only the pixels inside of the ROI
+        logger.info("Creating mask from ROIs")
         video_object._original_ROI = self.create_mask(
             video_object.original_height, video_object.original_width
         )
-        # TODO: Improve this, it is a bit obscure
-        # Needs to be done after _original_ROI is set since the resolution_reduction
-        # setter changes the size of the _ROI attribute based on the _original_ROI
+        video_object._subtract_bkg = self._bgsub.value
+        if self._bgsub.value:
+            if self._original_bkg is None:
+                # Asked for background subtraction but it is not computed
+                logger.info("Computing the background model")
+                video_object._original_bkg = compute_background(video_object)
+            else:
+                logger.info("Storing previously computed background model")
+                video_object._original_bkg = self._original_bkg
+        else:
+            # Did not ask for background subtraction
+            logger.info("No background model computed")
+            assert self._original_bkg is None
+            video_object._original_bkg = self._original_bkg
+        # Setting the resolution reduction parameter needs to come after
+        # ROI and the background model because setting this value resizes
+        # them accordingly
+        logger.info("Setting resolution reduction. This resizes ROI and bkg")
         video_object.resolution_reduction = self._resreduct.value
         video_object._track_wo_identities = self._no_ids.value
-        ## TODO: This step is also done when computing the background model
         video_object._setup_points = self.create_setup_poitns_dict()
 
         # Finished reading preprocessing parameters
