@@ -27,6 +27,8 @@ setup(
         "only-gui": ["pyforms-gui"],
     },
     entry_points={
-        "console_scripts": ["idtrackerai=idtrackerai_app.__main__:start",],
+        "console_scripts": [
+            "idtrackerai=idtrackerai_app.__main__:start",
+        ],
     },
 )

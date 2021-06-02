@@ -29,14 +29,13 @@ class Chosen_Video(object):
 
     def save(self):
         self.video.save()
-        if hasattr(self, 'list_of_blobs'):
+        if hasattr(self, "list_of_blobs"):
             self.list_of_blobs.save(
                 self.video,
                 self.video.blobs_path,
             )
         if self.list_of_fragments is not None:
-            self.list_of_fragments.save(
-                self.video.fragments_path)
+            self.list_of_fragments.save(self.video.fragments_path)
         if self.list_of_global_fragments is not None:
             self.list_of_global_fragments.save(
                 self.video.global_fragments_path,
