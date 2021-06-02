@@ -483,7 +483,9 @@ class BaseIdTrackerAi(
                 chosen_video.list_of_fragments.update_identification_images_dataset()
 
             logger.info(
-                "Estimated accuracy: {}".format(chosen_video.video.overall_P2)
+                "Estimated accuracy: {}".format(
+                    chosen_video.video.estimated_accuracy
+                )
             )
 
             chosen_video.video.delete_data()
@@ -491,7 +493,7 @@ class BaseIdTrackerAi(
             self._final_message = (
                 "Tracking finished with {0:.2f} "
                 "estimated accuracy.".format(
-                    chosen_video.video.overall_P2 * 100
+                    chosen_video.video.estimated_accuracy * 100
                 )
             )
 
