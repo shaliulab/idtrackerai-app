@@ -1,6 +1,6 @@
-__version__ = '0.0.12'
+__version__ = "0.0.12"
 
 import locale
 
-locale.setlocale(locale.LC_ALL,'en_US.UTF-8')
-locale.setlocale(locale.LC_NUMERIC,'en_US.UTF-8')
+locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+locale.setlocale(locale.LC_NUMERIC, "en_US.UTF-8")
