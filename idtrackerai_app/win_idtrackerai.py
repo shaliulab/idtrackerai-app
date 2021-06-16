@@ -408,16 +408,32 @@ def get_video_object_and_trajectories(video_path, session_name):
     session_path = os.path.join(video_folder, session_folder)
     trajs_wo_path = os.path.join(session_path, "trajectories_wo_gaps")
     trajs_path = os.path.join(session_path, "trajectories")
+    trajs_wo_identities = os.path.join(
+        session_path, "trajectories_wo_identities"
+    )
 
     video_object = np.load(
         os.path.join(session_path, "video_object.npy"), allow_pickle=True
     ).item()
 
     if os.path.exists(trajs_wo_path):
-        trajectories_file = glob.glob(os.path.join(trajs_wo_path, "*"))[-1]
+        trajectories_file = glob.glob(
+            os.path.join(trajs_wo_path, "*trajectories*.npy")
+        )[-1]
     elif os.path.exists(trajs_path):
-        trajectories_file = glob.glob(os.path.join(trajs_path, "*"))[-1]
-
+        trajectories_file = glob.glob(
+            os.path.join(trajs_path, "*trajectories*.npy")
+        )[-1]
+    elif os.path.exists(trajs_wo_identities):
+        trajectories_file = glob.glob(
+            os.path.join(trajs_wo_identities, "*trajectories*.npy")
+        )[-1]
+    else:
+        raise Exception(
+            f"None of {[trajs_wo_path, trajs_path, trajs_wo_identities]} "
+            f"exists"
+        )
+    print(f"Loading trajectories {trajectories_file}")
     trajectories = np.load(trajectories_file, allow_pickle=True).item()[
         "trajectories"
     ]
