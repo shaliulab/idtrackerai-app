@@ -6,13 +6,8 @@ from PyQt5.QtWidgets import QApplication
 from AnyQt.QtWidgets import QMessageBox
 from scipy import ndimage  # TODO: used to fill binary holes see below
 
-from idtrackerai.utils.segmentation_utils import (
-    segment_frame,
-    blob_extractor,
-    get_frame_average_intensity,
-    to_gray_scale,
-    gaussian_blur,
-)
+from idtrackerai.video import Video
+from idtrackerai.animals_detection.segmentation import _process_frame
 from idtrackerai.postprocessing.individual_videos import (
     generate_individual_videos,
 )
@@ -31,7 +26,7 @@ from .gui.range_win import RangeWin
 NEW_GUI_FORMSET = (
     [
         ("_video", "_session", "_savebtn"),
-        ("_nblobs", "_toggle_blobs_area_info", "_chcksegm", " "),
+        ("_number_of_animals", "_toggle_blobs_area_info", "_chcksegm", " "),
         ("_intensity", "_bgsub"),
         ("_area", "_resreduct"),
         ("_range", "_rangelst", "_addrange", "_multiple_range"),
@@ -47,7 +42,7 @@ OLD_GUI_FORMSET = [
     ("_video", "_session", "_savebtn"),
     "_player",
     "=",
-    ("_nblobs", "_toggle_blobs_area_info", "_chcksegm", " "),
+    ("_number_of_animals", "_toggle_blobs_area_info", "_chcksegm", " "),
     ("_intensity", "_bgsub"),
     ("_area", "_resreduct"),
     ("_range", "_rangelst", "_addrange", "_multiple_range"),
@@ -141,7 +136,12 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self.formset = (
             [
                 ("_video", "_resreduct", " "),
-                ("_nblobs", "_toggle_blobs_area_info", "_chcksegm", " "),
+                (
+                    "_number_of_animals",
+                    "_toggle_blobs_area_info",
+                    "_chcksegm",
+                    " ",
+                ),
                 "_intensity",
                 "_area",
                 ("_applyroi", "_bgsub", " "),
@@ -219,48 +219,51 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         It does the pre-visualization segmentation and ROIs selection.
         """
         # Save original shape to rescale if resolution reduction is applied
-        original_size = frame.shape[1], frame.shape[0]
-        frame = gaussian_blur(frame, sigma=conf.SIGMA_GAUSSIAN_BLURRING)
-        # Apply resolution reduction
-        if self._resreduct.value != 1:
-            frame = cv2.resize(
-                frame,
-                None,
-                fx=self._resreduct.value,
-                fy=self._resreduct.value,
-                interpolation=cv2.INTER_AREA,
-            )
-        # Convert the frame to gray scale
-        gray = to_gray_scale(frame)
-        # Create mask from ROI
-        mask = self.create_mask(*gray.shape)
-        # Normalize frame
-        normalized_framed = gray / get_frame_average_intensity(gray, mask)
-        # Binarize frame
-        bin_frame = segment_frame(
-            normalized_framed,
-            self._intensity.value[0],
-            self._intensity.value[1],
-            self._background_img,
-            mask,
-            self._bgsub.value,
+        original_size = frame.shape[1], frame.shape[0]  # (width, height)
+        self._frame_width = original_size[0]
+        self._frame_height = original_size[1]
+        self._mask_img = self.create_mask(
+            self._frame_height, self._frame_width
         )
-        # Fill holes in the segmented frame to avoid duplication of contours
-        bin_frame = ndimage.binary_fill_holes(bin_frame).astype("uint8")
-        # Extract blobs
-        boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(
-            bin_frame.copy(),
+        animal_detection_parameters = {
+            "number_of_animals": int(self._number_of_animals.value),
+            "min_threshold": self._intensity.value[0],
+            "max_threshold": self._intensity.value[1],
+            "min_area": self._area.value[0],
+            "max_area": self._area.value[1],
+            "tracking_interval": None,
+            "apply_ROI": self._applyroi.value,
+            "rois": self._roi.value,
+            "mask": self._mask_img,
+            "subtract_bkg": self._bgsub.value,
+            "bkg_model": self._background_img,
+            "resolution_reduction": self._resreduct.value,
+            "sigma_gaussian_blurring": conf.SIGMA_GAUSSIAN_BLURRING,
+        }
+
+        (boxes, _, _, areas, _, contours, _,) = _process_frame(
             frame,
-            int(self._area.value[0]),
-            int(self._area.value[1]),
+            animal_detection_parameters,
+            -1,  # Get frame_number from the Widget
+            save_pixels="NONE",
+            save_segmentation_image="NONE",
         )
+
         # Save detected areas to plot the bar plot of the blobs size in pixels
         self._detected_areas = areas
         # Update graph with areas of seglemted blobs
         if conf.PYFORMS_MODE == "GUI" and self._toggle_blobs_area_info.value:
             self._graph.draw()
         # Draw detected blobs in frame
-        cv2.drawContours(frame, good_cnt, -1, color=(0, 0, 255), thickness=-1)
+        if animal_detection_parameters["resolution_reduction"] != 1:
+            frame = cv2.resize(
+                frame,
+                None,
+                fx=animal_detection_parameters["resolution_reduction"],
+                fy=animal_detection_parameters["resolution_reduction"],
+                interpolation=cv2.INTER_AREA,
+            )
+        cv2.drawContours(frame, contours, -1, color=(0, 0, 255), thickness=-1)
         # Resize to original size (ROI and setup points are in original size)
         frame = cv2.resize(frame, original_size, interpolation=cv2.INTER_AREA)
         # Draw ROIs in frame
@@ -297,6 +300,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         Ask to the player to load the video file.
         """
         if self.video_path:
+            video = Video(self.video_path, self.open_multiple_files)
+            self.video_object = video
             self._player.value = self.video_path
             if self._player.value:
                 self._range.max = self._player.max
@@ -454,15 +459,24 @@ def get_video_object_and_trajectories(video_path, session_name):
     session_path = os.path.join(video_folder, session_folder)
     trajs_wo_path = os.path.join(session_path, "trajectories_wo_gaps")
     trajs_path = os.path.join(session_path, "trajectories")
+    trajs_wo_ids_path = os.path.join(
+        session_path, "trajectories_wo_identities"
+    )
+    video_object_path = os.path.join(session_path, "video_object.npy")
 
-    video_object = np.load(
-        os.path.join(session_path, "video_object.npy"), allow_pickle=True
-    ).item()
+    video_object = Video.load(video_object_path)
 
     if os.path.exists(trajs_wo_path):
         trajectories_file = glob.glob(os.path.join(trajs_wo_path, "*"))[-1]
     elif os.path.exists(trajs_path):
         trajectories_file = glob.glob(os.path.join(trajs_path, "*"))[-1]
+    elif os.path.exists(trajs_wo_ids_path):
+        trajectories_file = glob.glob(os.path.join(trajs_wo_ids_path, "*"))[-1]
+    else:
+        raise FileExistsError(
+            "None of the following files exists"
+            f"{[trajs_path, trajs_wo_path, trajs_wo_ids_path]}"
+        )
 
     trajectories = np.load(trajectories_file, allow_pickle=True).item()[
         "trajectories"
