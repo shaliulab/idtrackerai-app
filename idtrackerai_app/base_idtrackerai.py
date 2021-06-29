@@ -335,7 +335,7 @@ class BaseIdTrackerAi(
         if self._applyroi:
             self._mask_img = self.create_mask(
                 self.video_object.original_height,
-                self.video_object.original_height,
+                self.video_object.original_width,
             )
         else:
             self._mask_img = np.ones(
@@ -344,6 +344,7 @@ class BaseIdTrackerAi(
                     self.video_object.original_width,
                 )
             )
+        return self._mask_img
 
     def _step1_get_user_defined_parameters(self):
         # TODO: Separate user defined parameters and advanced parameters
