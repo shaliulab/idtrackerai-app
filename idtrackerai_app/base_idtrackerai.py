@@ -242,10 +242,14 @@ class BaseIdTrackerAi(
             self._step0_init_video_object()
             self._step1_get_user_defined_parameters()
             # Preprocessing
-            self._step2_pre_processing()
+            # success will be False if there are more blobs than animals and
+            # the user asked to check the segmentation consistency
+            success = self._step2_pre_processing()
             # Training and identification
-            self._step3_tracking()  # Post processing
-            logging.info("Success")
+            if success:
+                self._step3_tracking()  # Post processing
+            else:
+                logging.info("Tracking failed")
         except Exception as e:
             self.save()
             logger.error(e, exc_info=True)
@@ -256,13 +260,10 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(True)
 
     def save(self):
-        logger.info("Saving objects from ChosenVideo")
+        logger.info("Saving objects from base_idtrackerai")
         self.video_object.save()
         if self.list_of_blobs is not None:
-            self.list_of_blobs.save(
-                self.video_object,
-                self.video_object.blobs_path,
-            )
+            self.list_of_blobs.save(self.video_object.blobs_path)
         if self.list_of_fragments is not None:
             self.list_of_fragments.save(self.video_object.fragments_path)
         if self.list_of_global_fragments is not None:
@@ -357,6 +358,7 @@ class BaseIdTrackerAi(
             "max_threshold": self._intensity.value[1],
             "min_area": self._area.value[0],
             "max_area": self._area.value[1],
+            "check_segmentation": self._chcksegm.value,
             "tracking_interval": self._tracking_interval,
             "apply_ROI": self._applyroi.value,
             "rois": self._roi.value,
@@ -395,7 +397,6 @@ class BaseIdTrackerAi(
         )
         self._progress.value = 0
         self._final_message = self.SEGMENTATION_CHECK_FINAL_MESSAGE
-        return False
 
     def _step2_pre_processing(self):
 
@@ -403,9 +404,11 @@ class BaseIdTrackerAi(
         animals_detector = AnimalsDetectionAPI(self.video_object)
         self.list_of_blobs = animals_detector()
         # Check segmentation consistency
-        if self._chcksegm.value and not animals_detector.check_segmentation():
+        segmentation_consistent = animals_detector.check_segmentation()
+        if not segmentation_consistent and self._chcksegm.value:
             outfile_path = animals_detector.save_inconsistent_frames()
-            return self.__output_segmentation_consistency_warning(outfile_path)
+            self.__output_segmentation_consistency_warning(outfile_path)
+            return False  # This will make the tracking finish
         self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
 
@@ -422,7 +425,7 @@ class BaseIdTrackerAi(
         self.list_of_fragments = fragmentator()
         self._progress.value = 3
         logger.info("FINISH: FRAGMENTATION")
-        return True
+        return True  # This will make the tracking continue
 
     def _step3_tracking(self):
 
