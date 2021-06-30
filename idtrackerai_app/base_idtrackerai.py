@@ -211,10 +211,8 @@ class BaseIdTrackerAi(
         super().load_form(data, path)
 
     def bgsub_changed_evt(self):
-        if self.video_path:
+        if self.video_object is not None:
             self.__get_bkg_model()
-        else:
-            self._bgsub.value = False
 
     def set_controls_enabled(self, status):
         self._applyroi.enabled = status
@@ -247,7 +245,7 @@ class BaseIdTrackerAi(
             self._step2_pre_processing()
             # Training and identification
             self._step3_tracking()  # Post processing
-
+            logging.info("Success")
         except Exception as e:
             self.save()
             logger.error(e, exc_info=True)
@@ -296,13 +294,12 @@ class BaseIdTrackerAi(
     def __get_tracking_interval(self):
         if self._multiple_range.value and self._rangelst.value:
             try:
-                tracking_interval = eval(self._rangelst.value)
+                self._tracking_interval = eval(self._rangelst.value)
             except Exception as e:
                 logger.fatal(e, exc_info=True)
-                tracking_interval = [self._range.value]
+                self._tracking_interval = [self._range.value]
         else:
-            tracking_interval = [self._range.value]
-        return tracking_interval
+            self._tracking_interval = [self._range.value]
 
     def __get_bkg_model(self):
         if self._bgsub.value:
@@ -321,15 +318,12 @@ class BaseIdTrackerAi(
                     self._mask_img,
                     self.video_object.episodes_start_end,
                 )
-                bkg_model = self._background_img
             else:
                 logger.info("Storing previously computed background model")
-                bkg_model = self._background_img
         else:
             # Did not ask for background subtraction
             logger.info("No background model computed")
-            bkg_model = None
-        return bkg_model
+            self._background_img = None
 
     def __get_mask(self):
         if self._applyroi:
@@ -344,9 +338,15 @@ class BaseIdTrackerAi(
                     self.video_object.original_width,
                 )
             )
-        return self._mask_img
 
     def _step1_get_user_defined_parameters(self):
+        # TODO: Make background subtraction depend on the tracking interval
+        # Collect tracking interval before computing the background
+        self.__get_tracking_interval()
+        self.__get_mask()
+        # The computation of the background has a computation of the mask
+        # TODO: Separate better mask and bkg
+        self.__get_bkg_model()
         # TODO: Separate user defined parameters and advanced parameters
         # There are other parameters that come form the local_settings.py
         # It would be great to store them all in a singe json file so we
@@ -357,12 +357,12 @@ class BaseIdTrackerAi(
             "max_threshold": self._intensity.value[1],
             "min_area": self._area.value[0],
             "max_area": self._area.value[1],
-            "tracking_interval": self.__get_tracking_interval(),
+            "tracking_interval": self._tracking_interval,
             "apply_ROI": self._applyroi.value,
             "rois": self._roi.value,
-            "mask": self.__get_mask(),
+            "mask": self._mask_img,
             "subtract_bkg": self._bgsub.value,
-            "bkg_model": self.__get_bkg_model(),
+            "bkg_model": self._background_img,
             "resolution_reduction": self._resreduct.value,
             "track_wo_identities": self._no_ids.value,
             "setup_points": self.create_setup_poitns_dict(),

@@ -222,6 +222,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         original_size = frame.shape[1], frame.shape[0]  # (width, height)
         self._frame_width = original_size[0]
         self._frame_height = original_size[1]
+        # TODO: check if bkgmodel needs to be updated because of new ROI
         self._mask_img = self.create_mask(
             self._frame_height, self._frame_width
         )
