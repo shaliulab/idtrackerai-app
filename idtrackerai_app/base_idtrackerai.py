@@ -245,11 +245,13 @@ class BaseIdTrackerAi(
             # success will be False if there are more blobs than animals and
             # the user asked to check the segmentation consistency
             success = self._step2_pre_processing()
-            # Training and identification
+            # Training and identification and post processing
             if success:
-                self._step3_tracking()  # Post processing
-            else:
-                logging.info("Tracking failed")
+                success = self._step3_tracking()
+            if success:
+                # This flag is important to register the smoke tests that work
+                logger.info("Success")
+
         except Exception as e:
             self.save()
             logger.error(e, exc_info=True)
@@ -470,6 +472,7 @@ class BaseIdTrackerAi(
                 )
             )
         self._progress.value = 4
+        return True
 
     def __update_progress(self, value, label=None, total=None):
 
