@@ -409,6 +409,7 @@ class BaseIdTrackerAi(
         segmentation_consistent = animals_detector.check_segmentation()
         if not segmentation_consistent and self._chcksegm.value:
             outfile_path = animals_detector.save_inconsistent_frames()
+            self.save()  # saves video_object
             self.__output_segmentation_consistency_warning(outfile_path)
             return False  # This will make the tracking finish
         self._progress.value = 1
