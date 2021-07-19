@@ -461,7 +461,7 @@ def get_video_object_and_trajectories(video_path, session_name):
     trajs_wo_path = os.path.join(session_path, "trajectories_wo_gaps")
     trajs_path = os.path.join(session_path, "trajectories")
     trajs_wo_ids_path = os.path.join(
-        session_path, "trajectories_wo_identities"
+        session_path, "trajectories_wo_identification"
     )
     video_object_path = os.path.join(session_path, "video_object.npy")
 

@@ -368,7 +368,7 @@ class BaseIdTrackerAi(
             "subtract_bkg": self._bgsub.value,
             "bkg_model": self._background_img,
             "resolution_reduction": self._resreduct.value,
-            "track_wo_identities": self._no_ids.value,
+            "track_wo_identification": self._no_ids.value,
             "setup_points": self.create_setup_poitns_dict(),
             "sigma_gaussian_blurring": conf.SIGMA_GAUSSIAN_BLURRING,
             "knowledge_transfer_folder": conf.KNOWLEDGE_TRANSFER_FOLDER_IDCNN,
@@ -436,10 +436,12 @@ class BaseIdTrackerAi(
             self.video_object, self.list_of_blobs, self.list_of_fragments
         )
 
-        if self.video_object.user_defined_parameters["track_wo_identities"]:
+        if self.video_object.user_defined_parameters[
+            "track_wo_identification"
+        ]:
             # START: FRAGMENTATION
             logger.info("START: TRACKING WITHOUT IDENTITIES")
-            tracker.track_wo_identities()
+            tracker.track_wo_identification()
             logger.info("FINISH: TRACKING WITHOUT IDENTITIES")
             self._final_message = (
                 "Tracking without identities finished. "
