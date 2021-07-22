@@ -377,6 +377,8 @@ class BaseIdTrackerAi(
         }
 
         if conf.IDENTITY_TRANSFER:
+            # TODO: the identification_image_size is not really passed by
+            # the used but inferred from the knowledge transfer folder
             (
                 user_defined_parameters["identity_transfer"],
                 user_defined_parameters["identification_image_size"],

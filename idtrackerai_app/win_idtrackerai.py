@@ -301,8 +301,6 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         Ask to the player to load the video file.
         """
         if self.video_path:
-            video = Video(self.video_path, self.open_multiple_files)
-            self.video_object = video
             self._player.value = self.video_path
             if self._player.value:
                 self._range.max = self._player.max
@@ -311,7 +309,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
                 self._player.forward_one_frame()
             else:
                 self.set_controls_enabled(False)
-
+            video = Video(self.video_path, self.open_multiple_files)
+            self.video_object = video
         else:
             self.set_controls_enabled(False)
 
