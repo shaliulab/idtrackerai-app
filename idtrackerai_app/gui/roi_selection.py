@@ -2,8 +2,35 @@ import cv2
 import math
 import numpy as np
 import logging
+import typing
 
 logger = logging.getLogger(__name__)
+
+def create_mask(roi_data: typing.List, mask: np.array):
+    """
+    Algorithm to produce a mask based on a list of points given in roi_data
+    roi_data can be a list of:
+    * strings where every string can be eval()uated to a list
+    * a list of points
+    """
+
+    if len(roi_data) > 0:
+        for row in roi_data:
+            if isinstance(row, str):
+                points = eval(row)
+            elif isinstance(row[0], str):
+                points = eval(row[0])
+            else:
+                points = row
+            if len(points) < 3:
+                continue
+            mask = cv2.fillPoly(
+                mask, [np.array(points, np.int32)], (255, 255, 255)
+            )
+    else:
+        mask = mask + 255
+
+    return mask
 
 
 def points_distance(p1, p2):
@@ -63,22 +90,8 @@ class ROISelectionWin(object):
         Create a mask based on the selected ROIs
         """
         mask = np.zeros((height, width), dtype=np.uint8)
-
-        if len(self._roi) > 0:
-            for row in self._roi.value:
-                if isinstance(row, str):
-                    points = eval(row)
-                elif isinstance(row[0], str):
-                    points = eval(row[0])
-                else:
-                    points = row
-                if len(points) < 3:
-                    continue
-                mask = cv2.fillPoly(
-                    mask, [np.array(points, np.int32)], (255, 255, 255)
-                )
-        else:
-            mask = mask + 255
+        roi = self._roi
+        mask = create_mask(roi.value, mask)
         return mask
 
     def roi_selection_changed_evt(self):
