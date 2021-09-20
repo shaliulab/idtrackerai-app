@@ -212,10 +212,11 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
 
         try:
             if self.step1_pre_processing():
-                if self._no_ids.value:
-                    self.step2_wo_tracking()
-                else:
-                    self.step2_tracking()
+                pass
+                # if self._no_ids.value:
+                #     self.step2_wo_tracking()
+                # else:
+                #     self.step2_tracking()
         except Exception as e:
             logger.error(e, exc_info=True)
             self.critical(str(e), "Error")
