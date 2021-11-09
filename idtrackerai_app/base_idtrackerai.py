@@ -12,23 +12,21 @@ from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
-from idtrackerai.utils.segmentation_utils import compute_background
-from idtrackerai.utils.py_utils import get_computed_processes
-from idtrackerai.constants import PROCESSES
-
-from idtrackerai.list_of_fragments import ListOfFragments
-from idtrackerai.list_of_global_fragments import ListOfGlobalFragments
+from idtrackerai.animals_detection.segmentation_utils import (
+    compute_background,
+)
 
 from idtrackerai.video import Video
 
-from idtrackerai.tracker_api import TrackerAPI
-from idtrackerai.preprocessing_api import PreprocessingAPI
+
+from idtrackerai.animals_detection import AnimalsDetectionAPI
+from idtrackerai.crossings_detection import CrossingsDetectionAPI
+from idtrackerai.fragmentation import FragmentationAPI
+from idtrackerai.tracker.tracker import TrackerAPI
 
 from .gui.roi_selection import ROISelectionWin
 from .gui.setup_points_selection import SetupInfoWin
 from .gui.player_win_interactions import PlayerWinInteractions
-
-from .helpers import Chosen_Video
 
 
 logger = logging.getLogger(__name__)
@@ -61,7 +59,16 @@ class BaseIdTrackerAi(
         ROISelectionWin.__init__(self)
         SetupInfoWin.__init__(self)
 
+        # Main objects of idtracker.ai
+        self.video_object = None
+        self.list_of_blobs = None
+        self.list_of_fragments = None
+        self.list_of_global_fragments = None
+
+        # App user interaction items
+        # Session folder
         self._session = ControlText("Session", default="test")
+        # Path to the video
         self._video = ControlFile("Video")
         self._video_path = ControlFile(
             "Video file. Note: overwrite the _video "
@@ -69,8 +76,9 @@ class BaseIdTrackerAi(
             "Nice to have to execute the "
             "application in a cluster environment"
         )
-
+        # Apply a ROI option
         self._applyroi = ControlCheckBox("Apply ROI", enabled=False)
+        # List of ROIs that together will build the mask
         self._roi = ControlList(
             "ROI",
             enabled=False,
@@ -79,13 +87,16 @@ class BaseIdTrackerAi(
             item_selection_changed_event=self.roi_selection_changed_evt,
             remove_function=self.remove_roi,
         )
-
+        # Apply background subtraction option
         self._bgsub = ControlCheckBox(
             "Subtract background",
             changed_event=self.bgsub_changed_evt,
             enabled=False,
         )
+        # Check that the number of segmented blobs in each frame is equal or
+        # lower than the number of animals in the video
         self._chcksegm = ControlCheckBox("Check segmentation", enabled=False)
+        # Resolution reduction factor
         self._resreduct = ControlNumber(
             "Resolution reduction",
             default=conf.RES_REDUCTION_DEFAULT,
@@ -95,7 +106,7 @@ class BaseIdTrackerAi(
             step=0.1,
             enabled=False,
         )
-
+        # Intensity thresholds for animal detection (segmentation)
         self._intensity = ControlBoundingSlider(
             "Intensity thresholds",
             default=[conf.MIN_THRESHOLD_DEFAULT, conf.MAX_THRESHOLD_DEFAULT],
@@ -103,6 +114,7 @@ class BaseIdTrackerAi(
             max=conf.MAX_THRESHOLD,
             enabled=False,
         )
+        # Area thresholds for animal detection (segmentation)
         self._area = ControlBoundingSlider(
             "Area thresholds",
             default=[conf.MIN_AREA_DEFAULT, conf.MAX_AREA_DEFAULT],
@@ -110,25 +122,25 @@ class BaseIdTrackerAi(
             max=conf.AREA_UPPER,
             enabled=False,
         )
+        # Ranges of frames to track
         self._range = ControlBoundingSlider(
             "Tracking interval",
             default=[0, 508],
             min=0,
             max=255,
             enabled=False,
-        )  ###TODO: Change max of frames range to the number of frames of the video
-        self._nblobs = ControlNumber(
+        )  ###TODO: Upate max to the number of frames in the video
+        self._rangelst = ControlText("Tracking intervals", visible=False)
+        self._multiple_range = ControlCheckBox("Multiple", enabled=False)
+        # Number of animals in the video
+        self._number_of_animals = ControlNumber(
             "Number of animals",
             default=conf.NUMBER_OF_ANIMALS_DEFAULT,
             enabled=False,
         )
-        self._progress = ControlProgress("Progress", enabled=False)
-
-        self._rangelst = ControlText("Tracking intervals", visible=False)
-        self._multiple_range = ControlCheckBox("Multiple", enabled=False)
-
+        # Tracking without identification
         self._no_ids = ControlCheckBox("Track without identities")
-
+        # Setup points to store together with the trajectories
         self._add_setup_info = ControlCheckBox("Add setup info", enabled=False)
         self._points_list = ControlList(
             "Setup info",
@@ -138,13 +150,23 @@ class BaseIdTrackerAi(
             item_selection_changed_event=self.add_setup_info_changed_evt,
             remove_function=self.remove_setup_info,
         )
+        # Progress bar
+        self._progress = ControlProgress("Progress", enabled=False)
 
+        # App attributes
         self.formset = [
             ("_video", "_session"),
             ("_range", "_rangelst", "_multiple_range"),
             "_intensity",
             "_area",
-            ("_nblobs", "_resreduct", " ", "_applyroi", "_chcksegm", "_bgsub"),
+            (
+                "_number_of_animals",
+                "_resreduct",
+                " ",
+                "_applyroi",
+                "_chcksegm",
+                "_bgsub",
+            ),
             "_roi",
             ("_no_ids", "_progress"),
             ("_add_setup_info", " "),
@@ -159,7 +181,7 @@ class BaseIdTrackerAi(
             "_multiple_range",
             "_intensity",
             "_area",
-            "_nblobs",
+            "_number_of_animals",
             "_resreduct",
             "_chcksegm",
             "_roi",
@@ -172,10 +194,13 @@ class BaseIdTrackerAi(
 
         # store the computed background with the correct resolution reduction
         self._background_img = None
-        # store the computed background with the original size
-        self._original_bkg = None
+        self._mask_img = None
+
         # flag to open multiple video files with similar names
         self._multiple_files = False
+
+        self._frame_height = None
+        self._frame_width = None
 
     #########################################################
     ## GUI EVENTS ###########################################
@@ -186,28 +211,8 @@ class BaseIdTrackerAi(
         super().load_form(data, path)
 
     def bgsub_changed_evt(self):
-
-        if not hasattr(self, "_args") and self._bgsub.value:
-            # If is an instance from the GUI and bgsub is checked
-            # (when tracking from the GUI the BaseWidgest has not attribute
-            # _args. When tracking with terminal_mode it has attrubit "_args"
-            # and we compute the background in self.step0_init
-            if self.video_path:
-                video = Video(
-                    video_path=self.video_path,
-                    open_multiple_files=self.open_multiple_files,
-                )
-                video.get_info_from_video_file()
-                video._subtract_bkg = True
-                video._original_ROI = self.create_mask(
-                    video._original_height, video._original_width
-                )
-                video._original_bkg = compute_background(video)
-                self._original_bkg = video.original_bkg
-                video.resolution_reduction = self._resreduct.value
-                self._background_img = video.bkg
-            else:
-                self._bgsub.value = False
+        if self.video_object is not None:
+            self.__get_bkg_model()
 
     def set_controls_enabled(self, status):
         self._applyroi.enabled = status
@@ -218,7 +223,7 @@ class BaseIdTrackerAi(
         self._intensity.enabled = status
         self._area.enabled = status
         self._range.enabled = status
-        self._nblobs.enabled = status
+        self._number_of_animals.enabled = status
         self._progress.enabled = status
         self._multiple_range.enabled = status
         self._rangelst.enabled = status
@@ -233,19 +238,22 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(False)
 
         try:
-            # Init tracking manager (chosen_video)
-            chosen_video = self.step0_init()
-
+            # Init tracking manager
+            self._step0_init_video_object()
+            self._step1_get_user_defined_parameters()
             # Preprocessing
-            success_preprocessing = self.step1_pre_processing(chosen_video)
-            if success_preprocessing:
-                # Training and identification
-                self.step2_tracking(chosen_video)
-                # Post processing
+            # success will be False if there are more blobs than animals and
+            # the user asked to check the segmentation consistency
+            success = self._step2_pre_processing()
+            # Training and identification and post processing
+            if success:
+                success = self._step3_tracking()
+            if success:
+                # This flag is important to register the smoke tests that work
+                logger.info("Success")
 
         except Exception as e:
-            if "chosen_video" in locals():
-                chosen_video.save()
+            self.save()
             logger.error(e, exc_info=True)
             self.critical(str(e), "Error")
 
@@ -253,7 +261,22 @@ class BaseIdTrackerAi(
         self._session.enabled = True
         self.set_controls_enabled(True)
 
-    def step0_init(self):
+    def save(self):
+        logger.info("Saving objects from base_idtrackerai")
+        self.video_object.save()
+        if self.list_of_blobs is not None:
+            self.list_of_blobs.save(self.video_object.blobs_path)
+        if self.list_of_fragments is not None:
+            self.list_of_fragments.save(self.video_object.fragments_path)
+        if self.list_of_global_fragments is not None:
+            self.list_of_global_fragments.save(
+                self.video_object.global_fragments_path,
+                self.list_of_fragments.fragments,
+            )
+
+    def _step0_init_video_object(self):
+
+        self._progress.max = 4
 
         if not os.path.exists(self.video_path):
             raise Exception(
@@ -262,240 +285,199 @@ class BaseIdTrackerAi(
             )
 
         # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
-        logger.info("START: INIT VIDEO OBJECT")
-        video_object = Video(
-            video_path=self.video_path,
-            open_multiple_files=self.open_multiple_files,
-        )
-        video_object._video_folder = os.path.dirname(self.video_path)
+        if self.video_object is None:
+            logger.info("START: INIT VIDEO OBJECT")
+            self.video_object = Video(
+                video_path=self.video_path,
+                open_multiple_files=self.open_multiple_files,
+            )
+            logger.info("FINISH: INIT VIDEO OBJECT")
+        self.video_object.create_session_folder(self._session.value)
 
-        # Gets video with, height frames per second from the video file.
-        video_object.get_info_from_video_file()
-
-        # define the thresholds ranges
-        video_object._min_threshold = self._intensity.value[0]
-        video_object._max_threshold = self._intensity.value[1]
-
-        # define the areas range
-        video_object._min_area = self._area.value[0]
-        video_object._max_area = self._area.value[1]
-
-        # define the video range
+    def __get_tracking_interval(self):
         if self._multiple_range.value and self._rangelst.value:
             try:
-                video_object._tracking_interval = eval(self._rangelst.value)
+                self._tracking_interval = eval(self._rangelst.value)
             except Exception as e:
                 logger.fatal(e, exc_info=True)
-                video_object._tracking_interval = [self._range.value]
+                self._tracking_interval = [self._range.value]
         else:
-            video_object._tracking_interval = [self._range.value]
+            self._tracking_interval = [self._range.value]
 
-        video_object._video_folder = os.path.dirname(self.video_path)
-        video_object._number_of_animals = int(self._nblobs.value)
-        video_object._apply_ROI = self._applyroi.value
-        # Computation of mask needs to come before background model
-        # because in the computation of the background model frames are
-        # normalized the frames considering only the pixels inside of the ROI
-        logger.info("Creating mask from ROIs")
-        video_object._original_ROI = self.create_mask(
-            video_object.original_height, video_object.original_width
-        )
-        video_object._subtract_bkg = self._bgsub.value
+    def __get_bkg_model(self):
         if self._bgsub.value:
-            if self._original_bkg is None:
+            if self._background_img is None:
                 # Asked for background subtraction but it is not computed
                 logger.info("Computing the background model")
-                video_object._original_bkg = compute_background(video_object)
+                self._mask_img = self.create_mask(
+                    self.video_object.original_height,
+                    self.video_object.original_width,
+                )
+                self._background_img = compute_background(
+                    self.video_object.video_paths,
+                    self.video_object.original_height,
+                    self.video_object.original_width,
+                    self.video_object.video_path,
+                    self._mask_img,
+                    self.video_object.episodes_start_end,
+                )
             else:
                 logger.info("Storing previously computed background model")
-                video_object._original_bkg = self._original_bkg
         else:
             # Did not ask for background subtraction
             logger.info("No background model computed")
-            assert self._original_bkg is None
-            video_object._original_bkg = self._original_bkg
-        # Setting the resolution reduction parameter needs to come after
-        # ROI and the background model because setting this value resizes
-        # them accordingly
-        logger.info("Setting resolution reduction. This resizes ROI and bkg")
-        video_object.resolution_reduction = self._resreduct.value
-        video_object._track_wo_identities = self._no_ids.value
-        video_object._setup_points = self.create_setup_poitns_dict()
+            self._background_img = None
 
-        # Finished reading preprocessing parameters
-        video_object._has_preprocessing_parameters = True
+    def __get_mask(self):
+        if self._applyroi:
+            self._mask_img = self.create_mask(
+                self.video_object.original_height,
+                self.video_object.original_width,
+            )
+        else:
+            self._mask_img = np.ones(
+                (
+                    self.video_object.original_height,
+                    self.video_object.original_width,
+                )
+            )
+
+    def _step1_get_user_defined_parameters(self):
+        # TODO: Make background subtraction depend on the tracking interval
+        # Collect tracking interval before computing the background
+        self.__get_tracking_interval()
+        self.__get_mask()
+        # The computation of the background has a computation of the mask
+        # TODO: Separate better mask and bkg
+        self.__get_bkg_model()
+        # TODO: Separate user defined parameters and advanced parameters
+        # There are other parameters that come form the local_settings.py
+        # It would be great to store them all in a singe json file so we
+        # can check all the parameters used for tracking
+        user_defined_parameters = {
+            "number_of_animals": int(self._number_of_animals.value),
+            "min_threshold": self._intensity.value[0],
+            "max_threshold": self._intensity.value[1],
+            "min_area": self._area.value[0],
+            "max_area": self._area.value[1],
+            "check_segmentation": self._chcksegm.value,
+            "tracking_interval": self._tracking_interval,
+            "apply_ROI": self._applyroi.value,
+            "rois": self._roi.value,
+            "mask": self._mask_img,
+            "subtract_bkg": self._bgsub.value,
+            "bkg_model": self._background_img,
+            "resolution_reduction": self._resreduct.value,
+            "track_wo_identification": self._no_ids.value,
+            "setup_points": self.create_setup_poitns_dict(),
+            "sigma_gaussian_blurring": conf.SIGMA_GAUSSIAN_BLURRING,
+            "knowledge_transfer_folder": conf.KNOWLEDGE_TRANSFER_FOLDER_IDCNN,
+            "identity_transfer": False,
+            "identification_image_size": None,
+        }
 
         if conf.IDENTITY_TRANSFER:
-            video_object.check_and_set_identity_transfer_if_possible()
-
-        if conf.KNOWLEDGE_TRANSFER_FOLDER_IDCNN:
-            video_object._tracking_with_knowledge_transfer = True
-        else:
-            video_object._tracking_with_knowledge_transfer = False
-
-        video_object.create_session_folder(self._session.value)
-
-        logger.debug("create Chosen_Video")
-        chosen_video = Chosen_Video(video=video_object)
-        logger.info("FINISH: INIT VIDEO OBJECT")
-
-        # TODO: Uncomment to start developping restoring (tracking will fail)
-        # (
-        #     chosen_video.processes_to_restore,
-        #     chosen_video.old_video,
-        # ) = get_computed_processes(chosen_video.video, PROCESSES)
-        # logger.info(
-        #     f"Processes to restore: {chosen_video.processes_to_restore}"
-        # )
-        return chosen_video
-
-    def step1_pre_processing(self, chosen_video):
-
-        logger.debug("before init PreprocessingAPI")
-        self._progress.max = 9
-
-        # PREPROCESSING
-        pre = PreprocessingAPI(chosen_video)
-        self._progress.value = 1
-
-        # START: ANIMAL DETECTION
-        logger.info("START: ANIMAL DETECTION")
-        pre.detect_animals()
-        self._progress.value = 2
-        # Check segmentation consistency
-        segmentation_consistent = pre.check_segmentation_consistency()
-        if self._chcksegm.value and not segmentation_consistent:
-            outfile_path = pre.save_inconsistent_frames()
-            self.warning(
-                "On some frames it was found more blobs than "
-                "animals, "
-                "you can find the index of these frames in the file:"
-                "<p>{0}</p>"
-                "<p>Please readjust the segmentation parameters and press 'Track video' again.</p>".format(
-                    outfile_path
-                ),
-                "Found more blobs than animals",
+            # TODO: the identification_image_size is not really passed by
+            # the used but inferred from the knowledge transfer folder
+            (
+                user_defined_parameters["identity_transfer"],
+                user_defined_parameters["identification_image_size"],
+            ) = TrackerAPI.check_if_identity_transfer_is_possible(
+                user_defined_parameters["number_of_animals"],
+                conf.KNOWLEDGE_TRANSFER_FOLDER_IDCNN,
             )
-            self._progress.value = 0
-            self._final_message = self.SEGMENTATION_CHECK_FINAL_MESSAGE
-            return False
-        self._progress.value = 3
-        # Save list of blobs
-        pre.save_list_of_blobs_segmented()
-        self._progress.value = 4
-        # FINISH: ANIMAL DETECTION
+
+        self.video_object._user_defined_parameters = user_defined_parameters
+
+    def __output_segmentation_consistency_warning(self, outfile_path):
+        self.warning(
+            "On some frames it was found more blobs than "
+            "animals, "
+            "you can find the index of these frames in the file:"
+            f"<p>{outfile_path}</p>"
+            "<p>Please readjust the segmentation parameters and "
+            "press 'Track video' again.</p>",
+            "Found more blobs than animals",
+        )
+        self._progress.value = 0
+        self._final_message = self.SEGMENTATION_CHECK_FINAL_MESSAGE
+
+    def _step2_pre_processing(self):
+
+        logger.info("START: ANIMAL DETECTION")
+        animals_detector = AnimalsDetectionAPI(self.video_object)
+        self.list_of_blobs = animals_detector()
+        # Check segmentation consistency
+        segmentation_consistent = animals_detector.check_segmentation()
+        if not segmentation_consistent and self._chcksegm.value:
+            outfile_path = animals_detector.save_inconsistent_frames()
+            self.save()  # saves video_object
+            self.__output_segmentation_consistency_warning(outfile_path)
+            return False  # This will make the tracking finish
+        self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
 
-        # START: CROSSING DETECTION
         logger.info("START: CROSSING DETECTION")
-        pre.compute_model_area()
-        self._progress.value = 5
-        pre.set_identification_images()
-        self._progress.value = 6
-        pre.connect_list_of_blobs()
-        self._progress.value = 7
-        logger.debug("call: train_and_apply_crossing_detector")
-        pre.train_and_apply_crossing_detector()
-        self._progress.value = 8
-        # FINISH: CROSSING DETECTION
+        crossings_detector = CrossingsDetectionAPI(
+            self.video_object, self.list_of_blobs
+        )
+        crossings_detector()
+        self._progress.value = 2
         logger.info("FINISH: CROSSING DETECTION")
 
-        # START: FRAGMENTATION
         logger.info("START: FRAGMENTATION")
-        pre.generate_list_of_fragments_and_global_fragments()
-        self._progress.value = 9
-        # FINISH: FRAGMENTATION
+        fragmentator = FragmentationAPI(self.video_object, self.list_of_blobs)
+        self.list_of_fragments = fragmentator()
+        self._progress.value = 3
         logger.info("FINISH: FRAGMENTATION")
-        return True
+        return True  # This will make the tracking continue
 
-    def reinit_chosen_video(self):
-        video_folder = os.path.dirname(self.video_path)
-        session_folder = "session_{0}".format(self._session.value)
+    def _step3_tracking(self):
 
-        videoobj_filepath = os.path.join(
-            video_folder, session_folder, "video_object.npy"
-        )
-        fragments_filepath = os.path.join(
-            video_folder, session_folder, "preprocessing", "fragments.npy"
-        )
-        gfragments_filepath = os.path.join(
-            video_folder,
-            session_folder,
-            "preprocessing",
-            "global_fragments.npy",
+        tracker = TrackerAPI(
+            self.video_object, self.list_of_blobs, self.list_of_fragments
         )
 
-        video_object = np.load(videoobj_filepath, allow_pickle=True).item()
-        video_object.create_session_folder(self._session.value)
-
-        if video_object.number_of_animals != 1:
-            list_of_fragments = ListOfFragments.load(fragments_filepath)
-            list_of_global_fragments = ListOfGlobalFragments.load(
-                gfragments_filepath, list_of_fragments.fragments
-            )
-        else:
-            list_of_fragments = None
-            list_of_global_fragments = None
-
-        chosen_video = Chosen_Video(
-            video=video_object,
-            list_of_fragments=list_of_fragments,
-            list_of_global_fragments=list_of_global_fragments,
-        )
-
-        chosen_video.existent_files, chosen_video.old_video = getExistentFiles(
-            chosen_video.video, PROCESSES
-        )
-
-    def step2_tracking(self, chosen_video=None):
-
-        tracker = TrackerAPI(chosen_video)
-
-        if chosen_video.video.track_wo_identities:
+        if self.video_object.user_defined_parameters[
+            "track_wo_identification"
+        ]:
             # START: FRAGMENTATION
             logger.info("START: TRACKING WITHOUT IDENTITIES")
-            tracker.track_wo_identities()
+            tracker.track_wo_identification()
             logger.info("FINISH: TRACKING WITHOUT IDENTITIES")
             self._final_message = (
                 "Tracking without identities finished. "
                 "No estimated accuracy computed."
             )
         else:
-            if chosen_video.video.number_of_animals == 1:
+            if (
+                self.video_object.user_defined_parameters["number_of_animals"]
+                == 1
+            ):
                 logger.info("START: TRACKING SINGLE ANIMAL")
                 tracker.track_single_animal()
                 logger.info("FINISH: TRACKING SINGLE ANIMAL")
 
             else:
-                if (
-                    chosen_video.list_of_global_fragments.number_of_global_fragments
-                    == 1
-                ):
-                    logger.info("START: TRACKING SINGLE GLOBAL FRAGMENT")
-                    tracker.track_single_global_fragment_video()
-                    logger.info("FINISH: TRACKING SINGLE GLOBAL FRAGMENT")
-
-                else:
-                    logger.info("START: TRACKING")
-                    tracker.track_w_identities()
-                    logger.info("FINISH: TRACKING")
-
-                chosen_video.list_of_fragments.update_identification_images_dataset()
+                tracker.track_multiple_animals()
+                self.list_of_fragments.update_identification_images_dataset()
 
             logger.info(
                 "Estimated accuracy: {}".format(
-                    chosen_video.video.estimated_accuracy
+                    self.video_object.estimated_accuracy
                 )
             )
 
-            chosen_video.video.delete_data()
+            self.video_object.delete_data()
 
             self._final_message = (
                 "Tracking finished with {0:.2f} "
                 "estimated accuracy.".format(
-                    chosen_video.video.estimated_accuracy * 100
+                    self.video_object.estimated_accuracy * 100
                 )
             )
+        self._progress.value = 4
+        return True
 
     def __update_progress(self, value, label=None, total=None):
 
