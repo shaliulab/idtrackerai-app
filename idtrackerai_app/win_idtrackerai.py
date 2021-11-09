@@ -459,24 +459,22 @@ def get_video_object_and_trajectories(video_path, session_name):
     session_path = os.path.join(video_folder, session_folder)
     trajs_wo_path = os.path.join(session_path, "trajectories_wo_gaps")
     trajs_path = os.path.join(session_path, "trajectories")
-    trajs_wo_ids_path = os.path.join(
+    traj_wo_ids_path = os.path.join(
         session_path, "trajectories_wo_identification"
     )
-    video_object_path = os.path.join(session_path, "video_object.npy")
 
-    video_object = Video.load(video_object_path)
+    video_object = np.load(
+        os.path.join(session_path, "video_object.npy"), allow_pickle=True
+    ).item()
 
     if os.path.exists(trajs_wo_path):
-        trajectories_file = glob.glob(os.path.join(trajs_wo_path, "*"))[-1]
+        trajectories_file = glob.glob(os.path.join(trajs_wo_path, "*.npy"))[-1]
     elif os.path.exists(trajs_path):
-        trajectories_file = glob.glob(os.path.join(trajs_path, "*"))[-1]
-    elif os.path.exists(trajs_wo_ids_path):
-        trajectories_file = glob.glob(os.path.join(trajs_wo_ids_path, "*"))[-1]
-    else:
-        raise FileExistsError(
-            "None of the following files exists"
-            f"{[trajs_path, trajs_wo_path, trajs_wo_ids_path]}"
-        )
+        trajectories_file = glob.glob(os.path.join(trajs_path, "*.npy"))[-1]
+    elif os.path.exists(traj_wo_ids_path):
+        trajectories_file = glob.glob(os.path.join(traj_wo_ids_path, "*.npy"))[
+            -1
+        ]
 
     trajectories = np.load(trajectories_file, allow_pickle=True).item()[
         "trajectories"
