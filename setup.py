@@ -17,14 +17,18 @@ setup(
     author_email="idtrackerai@gmail.com, ricardojvr@gmail.com, paco.romero.ferrero@gmail.com",
     url="https://idtrackerai-app.readthedocs.org",
     packages=find_packages(),
-    install_requires=["coloredlogs", "idtrackerai", "pyforms-terminal"],
+    install_requires=[
+        "coloredlogs",
+        "idtrackerai==4.0.0a0",
+        "pyforms-terminal==4.0.10",
+    ],
     extras_require={
         "gui": [
-            "pyforms-gui",
-            "python-video-annotator",
-            "python-video-annotator-module-idtrackerai==0.6.67",
+            "pyforms-gui==4.904.152",
+            "python-video-annotator==3.306",
+            "python-video-annotator-module-idtrackerai==1.0.0a0",
         ],
-        "only-gui": ["pyforms-gui"],
+        "only-gui": ["pyforms-gui==4.904.152"],
     },
     entry_points={
         "console_scripts": [
