@@ -80,6 +80,13 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
             changed_event=self.bgsub_changed_evt,
             enabled=False,
         )
+        
+        self._do_correct = ControlCheckBox(
+            "Correct image",
+            changed_event=self.bgsub_changed_evt,
+            enabled=False,
+        )
+
         self._chcksegm = ControlCheckBox("Check segmentation", enabled=False)
         self._resreduct = ControlNumber(
             "Resolution reduction",
@@ -129,7 +136,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
             ("_range", "_rangelst", "_multiple_range"),
             "_intensity",
             "_area",
-            ("_nblobs", "_resreduct", " ", "_applyroi", "_chcksegm", "_bgsub"),
+            ("_nblobs", "_resreduct", " ", "_applyroi", "_chcksegm", "_bgsub", "_do_correct"),
             "_roi",
             ("_no_ids", "_progress"),
         ]
@@ -147,6 +154,7 @@ class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
             "_chcksegm",
             "_roi",
             "_no_ids",
+             "_do_correct",
             "_bgsub",
         ]
 

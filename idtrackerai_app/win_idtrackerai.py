@@ -25,7 +25,7 @@ NEW_GUI_FORMSET = (
     [
         ("_video", "_session", "_savebtn"),
         ("_nblobs", "_togglegraph", "_chcksegm", " "),
-        ("_intensity", "_bgsub"),
+        ("_intensity", "_bgsub", "_do_correct"),
         ("_area", "_resreduct"),
         ("_range", "_rangelst", "_addrange", "_multiple_range"),
         ("_applyroi", " "),
@@ -41,7 +41,7 @@ OLD_GUI_FORMSET = [
     "_player",
     "=",
     ("_nblobs", "_togglegraph", "_chcksegm", " "),
-    ("_intensity", "_bgsub"),
+    ("_intensity", "_bgsub",  "_do_correct"),
     ("_area", "_resreduct"),
     ("_range", "_rangelst", "_addrange", "_multiple_range"),
     ("_applyroi", " "),
@@ -215,6 +215,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             self._background_img,
             mask,
             self._bgsub.value,
+            av_intensity,
+            self._do_correct.value
         )
         boxes, mini_frames, _, areas, _, good_cnt, _ = blob_extractor(
             bin_frame.copy(), frame, int(min_area), int(max_area)
