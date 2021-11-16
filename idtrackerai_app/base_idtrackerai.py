@@ -41,8 +41,13 @@ from .helpers import Chosen_Video
 
 import tensorflow as tf
 
-with tf.Session() as sess:
-    logger.info("TENSORFLOW DEVICES: " + str(sess.list_devices()))
+try:
+    with tf.Session() as sess:
+        logger.info("TENSORFLOW DEVICES: " + str(sess.list_devices()))
+except Exception as error:
+    logger.error(error)
+    import traceback
+    logger.error(traceback.print_exc())
 
 
 class BaseIdTrackerAi(BaseWidget, ROISelectionWin):
