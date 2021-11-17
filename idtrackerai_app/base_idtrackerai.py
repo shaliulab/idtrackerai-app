@@ -93,6 +93,8 @@ class BaseIdTrackerAi(
             changed_event=self.bgsub_changed_evt,
             enabled=False,
         )
+        self._background_model_path = ControlFile("Background model file")
+
         # Check that the number of segmented blobs in each frame is equal or
         # lower than the number of animals in the video
         self._chcksegm = ControlCheckBox("Check segmentation", enabled=False)
@@ -307,28 +309,38 @@ class BaseIdTrackerAi(
 
     def get_background(self, *args, original_ROI=None, **kwargs):
 
-        try:
-            from AnyQt.QtWidgets import QMessageBox, QFileDialog
-        except Exception:
-            return compute_background(*args, original_ROI=original_ROI, **kwargs)
+        if self._background_model_path is None:
+            try:
+                from AnyQt.QtWidgets import QMessageBox, QFileDialog
+            except Exception:
+                logger.warning(
+                    "GUI elements to ask the user are not working." \
+                    "I will just compute the background on the spot"
+                )
+                return compute_background(*args, original_ROI=original_ROI, **kwargs)
 
-        m = QMessageBox(
-            QMessageBox.Question,
-            "Background computation",
-            "Do you have a background model file?",
-            QMessageBox.Yes | QMessageBox.No | QMessageBox.NoRole
-        )
-        reply = m.exec_()
+            m = QMessageBox(
+                QMessageBox.Question,
+                "Background computation",
+                "Do you have a background model file?",
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.NoRole
+            )
+            reply = m.exec_()
 
-        if reply == QMessageBox.No:
-            return compute_background(*args, original_ROI=original_ROI, **kwargs)
+            if reply == QMessageBox.No:
+                return compute_background(*args, original_ROI=original_ROI, **kwargs)
 
-        elif reply == QMessageBox.Yes:
-            filename = str(QFileDialog.getOpenFileName(self, 'Choose a file', '')[0])
-            return read_background(filename, original_ROI=original_ROI)
+            elif reply == QMessageBox.Yes:
+                filename = str(QFileDialog.getOpenFileName(self, 'Choose a file', '')[0])
+
+            else:
+                return compute_background(*args, original_ROI=original_ROI, **kwargs)
 
         else:
-            return compute_background(*args, original_ROI=original_ROI, **kwargs)
+            filename = self._background_model_path
+
+        return read_background(filename, original_ROI=original_ROI)
+
 
 
     def __get_bkg_model(self):
