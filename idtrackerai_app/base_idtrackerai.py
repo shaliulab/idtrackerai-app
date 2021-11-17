@@ -13,7 +13,7 @@ from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
 from idtrackerai.animals_detection.segmentation_utils import (
-    compute_background,
+    compute_background, read_background
 )
 
 from idtrackerai.video import Video
@@ -304,6 +304,33 @@ class BaseIdTrackerAi(
         else:
             self._tracking_interval = [self._range.value]
 
+
+    def get_background(self, *args, original_ROI=None, **kwargs):
+
+        try:
+            from AnyQt.QtWidgets import QMessageBox, QFileDialog
+        except Exception:
+            return compute_background(*args, original_ROI=original_ROI, **kwargs)
+
+        m = QMessageBox(
+            QMessageBox.Question,
+            "Background computation",
+            "Do you have a background model file?",
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.NoRole
+        )
+        reply = m.exec_()
+
+        if reply == QMessageBox.No:
+            return compute_background(*args, original_ROI=original_ROI, **kwargs)
+
+        elif reply == QMessageBox.Yes:
+            filename = str(QFileDialog.getOpenFileName(self, 'Choose a file', '')[0])
+            return read_background(filename, original_ROI=original_ROI)
+
+        else:
+            return compute_background(*args, original_ROI=original_ROI, **kwargs)
+
+
     def __get_bkg_model(self):
         if self._bgsub.value:
             if self._background_img is None:
@@ -313,14 +340,15 @@ class BaseIdTrackerAi(
                     self.video_object.original_height,
                     self.video_object.original_width,
                 )
-                self._background_img = compute_background(
+                self._background_img = self.get_background(
                     self.video_object.video_paths,
                     self.video_object.original_height,
                     self.video_object.original_width,
                     self.video_object.video_path,
-                    self._mask_img,
-                    self.video_object.episodes_start_end,
+                    original_ROI=self._mask_img,
+                    episodes_start_end=self.video_object.episodes_start_end,
                 )
+
             else:
                 logger.info("Storing previously computed background model")
         else:
