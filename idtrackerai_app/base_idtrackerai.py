@@ -157,7 +157,7 @@ class BaseIdTrackerAi(
 
         # App attributes
         self.formset = [
-            ("_video", "_session"),
+            ("_video", "_background_model_path", "_session"),
             ("_range", "_rangelst", "_multiple_range"),
             "_intensity",
             "_area",
@@ -178,6 +178,7 @@ class BaseIdTrackerAi(
         self.load_order = [
             "_session",
             "_video",
+            "_background_model_path",
             "_range",
             "_rangelst",
             "_multiple_range",
@@ -337,7 +338,7 @@ class BaseIdTrackerAi(
                 return compute_background(*args, original_ROI=original_ROI, **kwargs)
 
         else:
-            filename = self._background_model_path
+            filename = self._background_model_path.value
 
         return read_background(filename, original_ROI=original_ROI)
 
