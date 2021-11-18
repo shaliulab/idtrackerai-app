@@ -30,10 +30,15 @@ from .gui.player_win_interactions import PlayerWinInteractions
 
 
 logger = logging.getLogger(__name__)
+
 try:
     import local_settings
-
     conf += local_settings
+    conf._modules[0].IDENTITY_TRANSFER=getattr(local_settings, "IDENTITY_TRANSFER", False)
+    conf._modules[0].KNOWLEDGE_TRANSFER_FOLDER_IDCNN=getattr(local_settings, "KNOWLEDGE_TRANSFER_FOLDER_IDCNN", None)
+    logger.info(conf.IDENTITY_TRANSFER)
+    logger.info(conf.KNOWLEDGE_TRANSFER_FOLDER_IDCNN)
+
 except ImportError:
     logger.info("Local settings file not available.")
 
