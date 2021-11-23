@@ -315,7 +315,7 @@ class BaseIdTrackerAi(
 
     def get_background(self, *args, original_ROI=None, **kwargs):
 
-        if self._background_model_path is None:
+        if self._background_model_path.value == "":
             try:
                 from AnyQt.QtWidgets import QMessageBox, QFileDialog
             except Exception:
