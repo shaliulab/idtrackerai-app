@@ -508,8 +508,7 @@ class BaseIdTrackerAi(
             else self._video.value
         )
 
-    def _reload_conf(self):
-
+    def save_parameters(self):
         config_file = self._session.value + ".conf"
 
         if os.path.exists(config_file):
@@ -519,5 +518,4 @@ class BaseIdTrackerAi(
             import ipdb; ipdb.set_trace()
 
         else:
-            # the file does not exist
-            pass
+            self.save_window()

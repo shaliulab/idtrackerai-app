@@ -76,7 +76,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             "Track video", default=self.track_video, enabled=False
         )
         self._savebtn = ControlButton(
-            "Save parameters", default=self.save_window, enabled=False
+            "Save parameters", default=self.save_parameters, enabled=False
         )
 
         self._polybtn = ControlButton(
