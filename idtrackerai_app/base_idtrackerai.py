@@ -509,7 +509,6 @@ class BaseIdTrackerAi(
         )
 
     def save_parameters(self):
-        print(self._session.value)
         config_file = self._session.value + ".conf"
 
         if os.path.exists(config_file):
