@@ -1,4 +1,4 @@
-import numpy as np, os, logging
+import numpy as np, os, logging, os.path, json
 
 from confapp import conf
 
@@ -67,7 +67,7 @@ class BaseIdTrackerAi(
 
         # App user interaction items
         # Session folder
-        self._session = ControlText("Session", default="test")
+        self._session = ControlText("Session", default="test", changed_event=self._reload_conf)
         # Path to the video
         self._video = ControlFile("Video")
         self._video_path = ControlFile(
@@ -507,3 +507,17 @@ class BaseIdTrackerAi(
             if self._video_path.value
             else self._video.value
         )
+
+    def _reload_conf(self):
+
+        config_file = self._session.value + ".conf"
+
+        if os.path.exists(config_file):
+            with open(config_file, "r") as fh:
+                config = json.load(fh)
+
+            import ipdb; ipdb.set_trace()
+
+        else:
+            # the file does not exist
+            pass
