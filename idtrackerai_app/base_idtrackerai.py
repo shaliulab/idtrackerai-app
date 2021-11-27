@@ -509,21 +509,24 @@ class BaseIdTrackerAi(
         )
 
     def save_window(self):
-        config_file = self._session.value + ".conf"
+        if conf.PYFORMS_MODE == "GUI":
+            config_file = self._session.value + ".conf"
 
-        if os.path.exists(config_file):
+            if os.path.exists(config_file):
 
-            overwrite = self.ask("""A config file with same name exists.
-            Do you want to overwrite it?
-            Otherwise I will load from it
-            """)
+                overwrite = self.ask("""A config file with same name exists.
+                Do you want to overwrite it?
+                Otherwise I will load from it
+                """)
 
-            if overwrite:
-                return super().save_window()
+                if overwrite:
+                    return super(BaseIdTrackerAi, self).save_window()
+                else:
+                    with open(config_file, "r") as fh:
+                        data = json.load(fh)
+                    return self.load_form(data)
+
             else:
-                with open(config_file, "r") as fh:
-                    data = json.load(fh)
-                self.load_form(data)
-
+                return super(BaseIdTrackerAi, self).save_window()
         else:
-            super().save_window()
+            return None
