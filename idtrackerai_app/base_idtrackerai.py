@@ -67,7 +67,7 @@ class BaseIdTrackerAi(
 
         # App user interaction items
         # Session folder
-        self._session = ControlText("Session", default="test", changed_event=self.save_parameters)
+        self._session = ControlText("Session", default="test", changed_event=self.save_window)
         # Path to the video
         self._video = ControlFile("Video")
         self._video_path = ControlFile(
@@ -508,7 +508,7 @@ class BaseIdTrackerAi(
             else self._video.value
         )
 
-    def save_parameters(self):
+    def save_window(self):
         config_file = self._session.value + ".conf"
 
         if os.path.exists(config_file):
@@ -519,11 +519,11 @@ class BaseIdTrackerAi(
             """)
 
             if overwrite:
-                return self.save_window()
+                return super().save_window()
             else:
                 with open(config_file, "r") as fh:
                     data = json.load(fh)
                 self.load_form(data)
 
         else:
-            self.save_window()
+            super().save_window()
