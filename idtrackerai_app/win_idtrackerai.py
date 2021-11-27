@@ -76,7 +76,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             "Track video", default=self.track_video, enabled=False
         )
         self._savebtn = ControlButton(
-            "Save parameters", default=self.save_window, enabled=False
+            "Save parameters", default=self.save_parameters, enabled=False
         )
 
         self._polybtn = ControlButton(
@@ -188,6 +188,20 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self.__apply_roi_changed_evt()
         self.__add_setup_info_changed_evt()
         self.__session_changed_evt()
+
+    def ask(self, question):
+
+        reply = QMessageBox(
+            QMessageBox.Question,
+            "Overwrite or load",
+            question,
+            QMessageBox.No | QMessageBox.Yes
+        ).exec_()
+
+        if reply == QMessageBox.Yes:
+            return True
+        else:
+            return False
 
     def save_form(self, data={}, path=None):
         data["open-multiple-files"] = self.open_multiple_files

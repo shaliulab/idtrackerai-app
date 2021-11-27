@@ -1,4 +1,4 @@
-import numpy as np, os, logging
+import numpy as np, os, logging, os.path, json
 
 from confapp import conf
 
@@ -72,7 +72,7 @@ class BaseIdTrackerAi(
 
         # App user interaction items
         # Session folder
-        self._session = ControlText("Session", default="test")
+        self._session = ControlText("Session", default="test", changed_event=self.save_parameters)
         # Path to the video
         self._video = ControlFile("Video")
         self._video_path = ControlFile(
@@ -553,3 +553,24 @@ class BaseIdTrackerAi(
             if self._video_path.value
             else self._video.value
         )
+
+    def save_parameters(self):
+        print(self._session.value)
+        config_file = self._session.value + ".conf"
+
+        if os.path.exists(config_file):
+
+            overwrite = self.ask("""A config file with same name exists.
+            Do you want to overwrite it?
+            Otherwise I will load from it
+            """)
+
+            if overwrite:
+                return self.save_window()
+            else:
+                with open(config_file, "r") as fh:
+                    data = json.load(fh)
+                self.load_form(data)
+
+        else:
+            self.save_window()
