@@ -489,6 +489,8 @@ def get_video_object_and_trajectories(video_path, session_name):
         trajectories_file = glob.glob(os.path.join(traj_wo_ids_path, "*.npy"))[
             -1
         ]
+    else:
+        raise Exception(f"No trajectories file found for {session_path}")
 
     trajectories = np.load(trajectories_file, allow_pickle=True).item()[
         "trajectories"
