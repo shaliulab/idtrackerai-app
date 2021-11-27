@@ -189,6 +189,20 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self.__add_setup_info_changed_evt()
         self.__session_changed_evt()
 
+    def ask(self, question):
+
+        reply = QMessageBox(
+            QMessageBox.Question,
+            "Overwrite or load",
+            question,
+            QMessageBox.No | QMessageBox.Yes
+        ).exec_()
+
+        if reply == QMessageBox.Yes:
+            return True
+        else:
+            return False
+
     def save_form(self, data={}, path=None):
         data["open-multiple-files"] = self.open_multiple_files
         return super().save_form(data, path)
