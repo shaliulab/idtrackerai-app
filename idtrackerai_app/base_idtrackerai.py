@@ -30,12 +30,6 @@ from .gui.player_win_interactions import PlayerWinInteractions
 
 
 logger = logging.getLogger(__name__)
-try:
-    import local_settings
-
-    conf += local_settings
-except ImportError:
-    logger.info("Local settings file not available.")
 
 
 class BaseIdTrackerAi(
@@ -58,6 +52,12 @@ class BaseIdTrackerAi(
         BaseWidget.__init__(self, title="idtracker.ai")
         ROISelectionWin.__init__(self)
         SetupInfoWin.__init__(self)
+
+        print("***************************")
+        print("***************************")
+        print(conf.TEST_LOCAL_SETTINGS_PY)
+        print("***************************")
+        print("***************************")
 
         # Main objects of idtracker.ai
         self.video_object = None
