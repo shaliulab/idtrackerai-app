@@ -7,6 +7,9 @@ from AnyQt.QtWidgets import QMessageBox
 from scipy import ndimage  # TODO: used to fill binary holes see below
 
 from idtrackerai.video import Video
+from idtrackerai.video_imgstore import VideoImgstore
+
+
 from idtrackerai.animals_detection.segmentation import _process_frame
 from idtrackerai.postprocessing.individual_videos import (
     generate_individual_videos,
@@ -175,7 +178,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._player.click_event = self.on_player_click_in_video_window
         self._video.changed_event = self.__video_changed_evt
         self._video_path.changed_event = self.__video_changed_evt
-        self._imgstore.changed_event = self.__video_changed_evt
+        self.imgstore_path.changed_event = self.__imgstore_changed_evt
         self._intensity.changed_event = self._player.refresh
         self._player.double_click_event = (
             self.on_player_double_click_in_video_window
@@ -314,6 +317,26 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             self._range.show()
             self._addrange.hide()
             self._rangelst.hide()
+
+    def __imgstore_changed_evt(self):
+
+        if self.imgstore_path:
+            self._player.value = self.imgstore_path
+            if self._player.value:
+                self._range.max = self._player.max
+                self._range.value = [0, self._player.max]
+                self.set_controls_enabled(True)
+                self._player.forward_one_frame()
+            else:
+                self.set_controls_enabled(False)
+
+            video = VideoImgstore(
+                store_list=self.imgstore_path,
+                chunk=0,
+            )
+            self.video_object = video
+        else:
+            self.set_controls_enabled(False)
 
     def __video_changed_evt(self):
         """

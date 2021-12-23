@@ -33,7 +33,7 @@ from .gui.player_win_interactions import PlayerWinInteractions
 
 logger = logging.getLogger(__name__)
 
-videimgstore = logging.getLogger("idtrackerai.videoimgstore")
+videimgstore = logging.getLogger("idtrackerai.video_imgstore")
 
 try:
     import local_settings
@@ -76,6 +76,7 @@ class BaseIdTrackerAi(
         # Path to the video
         self._video = ControlFile("Video")
         self._imgstore = ControlFile("Imgstore")
+        self._other_imgstore = ControlFile("Other_imgstore")
         self._chunk = ControlText("Chunk")
         self._backend = ControlCheckBox("Imgstore", enabled=True, value=False)
 
@@ -164,7 +165,14 @@ class BaseIdTrackerAi(
 
         # App attributes
         self.formset = [
-            ("_backebd", "_video", "_imgstore", "_chunk", "_session"),
+            (
+                "_backebd",
+                "_video",
+                "_imgstore",
+                "_other_imgstore",
+                "_chunk",
+                "_session",
+            ),
             ("_range", "_rangelst", "_multiple_range"),
             "_intensity",
             "_area",
@@ -186,6 +194,7 @@ class BaseIdTrackerAi(
             "_session",
             "_video",
             "_imgstore",
+            "_other_imgstore",
             "_chunk",
             "_range",
             "_rangelst",
@@ -301,7 +310,13 @@ class BaseIdTrackerAi(
             if self._backend.value:
                 logger.info("Loading using imgstore backend")
                 self.video_object = VideoImgstore(
-                    video_path=self._imgstore, chunk=int(self._chunk)
+                    # TODO
+                    # For now just read one imgstore
+                    # but it would be very nice and cool
+                    # if idtrackerai could
+                    # exploit data from more than one synced video
+                    video_path=self._imgstore,
+                    chunk=int(self._chunk),
                 )
             else:
                 logger.info("Loading using opencv backend")
@@ -529,3 +544,10 @@ class BaseIdTrackerAi(
                 if self._video_path.value
                 else self._video.value
             )
+
+    @property
+    def imgstore_path(self):
+        if self._backend.value:
+            return [self._imgstore.value, self._other_imgstore.value]
+        else:
+            return []
