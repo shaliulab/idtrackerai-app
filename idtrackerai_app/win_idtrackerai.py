@@ -135,7 +135,14 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self.formset = (
             [
-                ("_video", "_resreduct", " "),
+                (
+                    "_backend",
+                    "_video",
+                    "_imgstore",
+                    "_chunk",
+                    "_resreduct",
+                    " ",
+                ),
                 (
                     "_number_of_animals",
                     "_toggle_blobs_area_info",
@@ -160,6 +167,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
 
         self._graph.on_draw = self.__graph_on_draw_evt
         self._applyroi.changed_event = self.__apply_roi_changed_evt
+        self._backend.changed_event = self.__backend_changed_evt
         self._add_setup_info.changed_event = self.__add_setup_info_changed_evt
         self._session.changed_event = self.__session_changed_evt
         self._player.drag_event = self.on_player_drag_in_video_window
@@ -167,6 +175,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._player.click_event = self.on_player_click_in_video_window
         self._video.changed_event = self.__video_changed_evt
         self._video_path.changed_event = self.__video_changed_evt
+        self._imgstore.changed_event = self.__video_changed_evt
         self._intensity.changed_event = self._player.refresh
         self._player.double_click_event = (
             self.on_player_double_click_in_video_window
@@ -186,6 +195,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._multiple_range.form.setMaximumWidth(130)
 
         self.__apply_roi_changed_evt()
+        self.__backend_changed_evt()
         self.__add_setup_info_changed_evt()
         self.__session_changed_evt()
 
@@ -212,6 +222,16 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._addrange.enabled = status
 
         self._add_points_btn.enabled = status
+
+    def __backend_changed_evt(self):
+        if self._backend.value:
+            self._video.hide()
+            self._imgstore.show()
+            self._chunk.show()
+        else:
+            self._video.show()
+            self._imgstore.hide()
+            self._chunk.hide()
 
     def process_frame_evt(self, frame):
         """

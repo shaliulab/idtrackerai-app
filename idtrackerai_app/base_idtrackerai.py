@@ -1,3 +1,4 @@
+from multiprocessing import Value
 import numpy as np, os, logging
 
 from confapp import conf
@@ -17,6 +18,7 @@ from idtrackerai.animals_detection.segmentation_utils import (
 )
 
 from idtrackerai.video import Video
+from idtrackerai.video_imgstore import VideoImgstore
 
 
 from idtrackerai.animals_detection import AnimalsDetectionAPI
@@ -30,6 +32,9 @@ from .gui.player_win_interactions import PlayerWinInteractions
 
 
 logger = logging.getLogger(__name__)
+
+videimgstore = logging.getLogger("idtrackerai.videoimgstore")
+
 try:
     import local_settings
 
@@ -70,6 +75,10 @@ class BaseIdTrackerAi(
         self._session = ControlText("Session", default="test")
         # Path to the video
         self._video = ControlFile("Video")
+        self._imgstore = ControlFile("Imgstore")
+        self._chunk = ControlText("Chunk")
+        self._backend = ControlCheckBox("Imgstore", enabled=True, value=False)
+
         self._video_path = ControlFile(
             "Video file. Note: overwrite the _video "
             "parameter defined in the json. "
@@ -155,7 +164,7 @@ class BaseIdTrackerAi(
 
         # App attributes
         self.formset = [
-            ("_video", "_session"),
+            ("_backebd", "_video", "_imgstore", "_chunk", "_session"),
             ("_range", "_rangelst", "_multiple_range"),
             "_intensity",
             "_area",
@@ -176,6 +185,8 @@ class BaseIdTrackerAi(
         self.load_order = [
             "_session",
             "_video",
+            "_imgstore",
+            "_chunk",
             "_range",
             "_rangelst",
             "_multiple_range",
@@ -287,10 +298,18 @@ class BaseIdTrackerAi(
         # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
         if self.video_object is None:
             logger.info("START: INIT VIDEO OBJECT")
-            self.video_object = Video(
-                video_path=self.video_path,
-                open_multiple_files=self.open_multiple_files,
-            )
+            if self._backend.value:
+                logger.info("Loading using imgstore backend")
+                self.video_object = VideoImgstore(
+                    video_path=self._imgstore, chunk=int(self._chunk)
+                )
+            else:
+                logger.info("Loading using opencv backend")
+
+                self.video_object = Video(
+                    video_path=self.video_path,
+                    open_multiple_files=self.open_multiple_files,
+                )
             logger.info("FINISH: INIT VIDEO OBJECT")
         self.video_object.create_session_folder(self._session.value)
 
@@ -502,8 +521,11 @@ class BaseIdTrackerAi(
 
     @property
     def video_path(self):
-        return (
-            self._video_path.value
-            if self._video_path.value
-            else self._video.value
-        )
+        if self._backend.value:
+            return self._imgstore.value
+        else:
+            return (
+                self._video_path.value
+                if self._video_path.value
+                else self._video.value
+            )
