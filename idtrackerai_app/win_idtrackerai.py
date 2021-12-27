@@ -68,7 +68,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
     def __init__(self, *args, **kwargs):
 
         self._player = ControlPlayer(
-            "Player", enabled=False, multiple_files=True
+            "Player", enabled=False, multiple_files=True,
+            annotate=conf.PLAYER_ANNOTATE
         )
         self._toggle_blobs_area_info = ControlCheckBox(
             "Segmented blobs info",
@@ -178,7 +179,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._player.click_event = self.on_player_click_in_video_window
         self._video.changed_event = self.__video_changed_evt
         self._video_path.changed_event = self.__video_changed_evt
-        self.imgstore_path.changed_event = self.__imgstore_changed_evt
+        self._imgstore.changed_event = self.__imgstore_changed_evt
         self._intensity.changed_event = self._player.refresh
         self._player.double_click_event = (
             self.on_player_double_click_in_video_window
@@ -331,8 +332,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
                 self.set_controls_enabled(False)
 
             video = VideoImgstore(
-                store_list=self.imgstore_path,
-                chunk=0,
+                store=self.imgstore_path
             )
             self.video_object = video
         else:

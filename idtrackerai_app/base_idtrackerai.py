@@ -76,7 +76,6 @@ class BaseIdTrackerAi(
         # Path to the video
         self._video = ControlFile("Video")
         self._imgstore = ControlFile("Imgstore")
-        self._other_imgstore = ControlFile("Other_imgstore")
         self._chunk = ControlText("Chunk")
         self._backend = ControlCheckBox("Imgstore", enabled=True, value=False)
 
@@ -169,7 +168,6 @@ class BaseIdTrackerAi(
                 "_backebd",
                 "_video",
                 "_imgstore",
-                "_other_imgstore",
                 "_chunk",
                 "_session",
             ),
@@ -194,7 +192,6 @@ class BaseIdTrackerAi(
             "_session",
             "_video",
             "_imgstore",
-            "_other_imgstore",
             "_chunk",
             "_range",
             "_rangelst",
@@ -548,6 +545,6 @@ class BaseIdTrackerAi(
     @property
     def imgstore_path(self):
         if self._backend.value:
-            return [self._imgstore.value, self._other_imgstore.value]
+            return self._imgstore.value
         else:
             return []
