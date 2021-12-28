@@ -312,8 +312,8 @@ class BaseIdTrackerAi(
                     # but it would be very nice and cool
                     # if idtrackerai could
                     # exploit data from more than one synced video
-                    video_path=self._imgstore,
-                    chunk=int(self._chunk),
+                    store=self._imgstore.value,
+                    chunk=int(self._chunk.value),
                 )
             else:
                 logger.info("Loading using opencv backend")
