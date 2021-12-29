@@ -322,7 +322,7 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
     def __imgstore_changed_evt(self):
 
         if self.imgstore_path:
-            self._player.value = self.imgstore_path
+            self._player.value = f"{self.imgstore_path}@{int(self._chunk.value)}"
             if self._player.value:
                 self._range.max = self._player.max
                 self._range.value = [0, self._player.max]
