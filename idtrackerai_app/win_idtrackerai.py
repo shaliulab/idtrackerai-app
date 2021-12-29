@@ -1,4 +1,5 @@
 import os, subprocess, cv2, numpy as np, sys
+import logging
 import glob
 from confapp import conf
 
@@ -56,6 +57,8 @@ OLD_GUI_FORMSET = [
     ("_indiv_videos", "_traj_video", " "),
 ]
 
+
+logger = logging.getLogger(__name__)
 
 class IdTrackerAiGUI(BaseIdTrackerAi):
 
@@ -331,8 +334,11 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
             else:
                 self.set_controls_enabled(False)
 
+            logger.warning("Initializing a VideoImgstore")
+            import ipdb; ipdb.set_trace()
             video = VideoImgstore(
-                store=self.imgstore_path
+                store=self.imgstore_path,
+                chunk = int(self._chunk.value)
             )
             self.video_object = video
         else:
