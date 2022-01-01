@@ -335,7 +335,6 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
                 self.set_controls_enabled(False)
 
             logger.warning("Initializing a VideoImgstore")
-            import ipdb; ipdb.set_trace()
             video = VideoImgstore(
                 store=self.imgstore_path,
                 chunk = int(self._chunk.value)
