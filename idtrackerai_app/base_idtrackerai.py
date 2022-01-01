@@ -304,7 +304,7 @@ class BaseIdTrackerAi(
         # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
         if self.video_object is None:
             logger.info("START: INIT VIDEO OBJECT")
-            if self._backend.value:
+            if self.imgstore_path is not None:
                 logger.info("Loading using imgstore backend")
                 self.video_object = VideoImgstore(
                     # TODO
@@ -533,7 +533,7 @@ class BaseIdTrackerAi(
 
     @property
     def video_path(self):
-        if self._backend.value:
+        if self._imgstore.value is not None:
             return self._imgstore.value
         else:
             return (
@@ -544,7 +544,4 @@ class BaseIdTrackerAi(
 
     @property
     def imgstore_path(self):
-        if self._backend.value:
-            return self._imgstore.value
-        else:
-            return []
+        return self._imgstore.value
