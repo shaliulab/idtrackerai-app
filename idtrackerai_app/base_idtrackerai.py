@@ -1,5 +1,4 @@
-from multiprocessing import Value
-import numpy as np, os, logging
+import numpy as np, os, logging, os.path, json
 
 from confapp import conf
 
@@ -72,7 +71,7 @@ class BaseIdTrackerAi(
 
         # App user interaction items
         # Session folder
-        self._session = ControlText("Session", default="test")
+        self._session = ControlText("Session", default="test", changed_event=self.save_window)
         # Path to the video
         self._video = ControlFile("Video")
         self._imgstore = ControlFile("Imgstore")
@@ -545,3 +544,26 @@ class BaseIdTrackerAi(
     @property
     def imgstore_path(self):
         return self._imgstore.value
+
+    def save_window(self):
+        if conf.PYFORMS_MODE == "GUI":
+            config_file = self._session.value + ".conf"
+
+            if os.path.exists(config_file):
+
+                overwrite = self.ask("""A config file with same name exists.
+                Do you want to overwrite it?
+                Otherwise I will load from it
+                """)
+
+                if overwrite:
+                    return super(BaseIdTrackerAi, self).save_window()
+                else:
+                    with open(config_file, "r") as fh:
+                        data = json.load(fh)
+                    return self.load_form(data)
+
+            else:
+                return super(BaseIdTrackerAi, self).save_window()
+        else:
+            return None
