@@ -82,9 +82,6 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._pre_processing = ControlButton(
             "Track video", default=self.track_video, enabled=False
         )
-        self._savebtn = ControlButton(
-            "Save parameters", default=self.save_parameters, enabled=False
-        )
 
         self._polybtn = ControlButton(
             "Polygon",
@@ -137,6 +134,10 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         self._graph = GraphAreaWin(parent_win=self)
 
         super().__init__(*args, **kwargs)
+
+        self._savebtn = ControlButton(
+            "Save parameters", default=self.save_window, enabled=False
+        )
 
         self.set_margin(10)
 
