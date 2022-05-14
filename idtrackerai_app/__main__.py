@@ -14,7 +14,7 @@ def start():
     )
     coloredlogs.install(
         level="DEBUG",
-        fmt="[%(levelname)-8s] %(name)-40s %(message)s",
+        fmt="%(asctime)s [%(levelname)-5s] %(name)-30s %(message)s",
         # stream=open("idtrackerai-app.log", 'w')
     )
     coloredlogs.install(
