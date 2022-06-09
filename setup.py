@@ -18,7 +18,7 @@ setup(
     url="https://idtrackerai-app.readthedocs.org",
     packages=find_packages(),
     install_requires=[
-        "coloredlogs",
+        "rich",
         "pyforms-terminal==4.*",
     ],
     extras_require={

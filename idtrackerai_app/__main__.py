@@ -4,27 +4,25 @@ sys.path.append(os.getcwd())
 
 
 def start():
-    import logging, locale, coloredlogs
+    import logging
+    from rich.logging import RichHandler
+    from rich.console import Console
 
-    logger = logging.getLogger(__name__)
     logging.basicConfig(
-        filename="idtrackerai-app.log",
-        filemode="w",
-        format="%(name)s - %(levelname)s - %(message)s",
-    )
-    coloredlogs.install(
-        level="DEBUG",
-        fmt="%(asctime)s [%(levelname)-5s] %(name)-30s %(message)s",
-        # stream=open("idtrackerai-app.log", 'w')
-    )
-    coloredlogs.install(
-        level="DEBUG",
-        fmt="[%(levelname)-8s] %(name)-40s %(message)s",
-        stream=open("idtrackerai-app.log", "w"),
+        level=0,
+        format="%(message)s",
+        datefmt="%b %d %H:%M:%S",
+        handlers=[
+            RichHandler(),
+            RichHandler(
+                console=Console(
+                    file=open("idtrackerai-app.log", "w"), width=150
+                )
+            ),
+        ],
     )
 
-    # logging.getLogger('').addHandler(open("idtrackerai-app.log", 'w'))
-
+    logger = logging.getLogger()
     from pyforms import start_app
     from confapp import conf
 
@@ -42,7 +40,6 @@ def start():
         pass
     except Exception as e:
         logger.info(e, exc_info=True)
-        import sys
         import traceback
 
         ex_type, ex, tb = sys.exc_info()
