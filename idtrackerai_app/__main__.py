@@ -8,16 +8,30 @@ def start():
     from rich.logging import RichHandler
     from rich.console import Console
 
+    logger_width_when_no_terminal = 150
+    try:
+        os.get_terminal_size()
+    except OSError:
+        # stdout is sent to file. We define logger width to a constant
+        size = logger_width_when_no_terminal
+    else:
+        # stdout is sent to terminal
+        # We define logger width to adapt to the terminal width
+        size = None
+
+    # The first handler is the terminal, the second one the .log file,
+    # both rendered with Rich and full logging (level=0)
     logging.basicConfig(
         level=0,
         format="%(message)s",
         datefmt="%b %d %H:%M:%S",
         handlers=[
-            RichHandler(),
+            RichHandler(console=Console(width=size)),
             RichHandler(
                 console=Console(
-                    file=open("idtrackerai-app.log", "w"), width=150
-                )
+                    file=open("idtrackerai-app.log", "w"),
+                    width=logger_width_when_no_terminal,
+                ),
             ),
         ],
     )
