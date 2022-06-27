@@ -10,7 +10,7 @@ with open("idtrackerai_app/__init__.py", "r") as fd:
     ).group(1)
 
 setup(
-    name="idtrackerai-app",
+    name="idtrackerai-app-shaliulab",
     version=version,
     description="""""",
     author=["Ricardo Ribeiro", "Francisco Romero Ferrero"],
