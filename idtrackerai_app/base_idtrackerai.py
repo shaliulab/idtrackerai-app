@@ -1,6 +1,6 @@
 import numpy as np, os, logging
 
-from confapp import conf
+from confapp import conf, load_config
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
@@ -31,11 +31,19 @@ from .gui.player_win_interactions import PlayerWinInteractions
 
 logger = logging.getLogger(__name__)
 try:
-    import local_settings
+    import local_settings # type: ignore
 
     conf += local_settings
 except ImportError:
     logger.info("Local settings file not available.")
+
+try:
+    import imgstore.constants
+    CHUNK = load_config(imgstore.constants).CHUNK
+    logger.info(f"Selected chunk={CHUNK}")
+
+except ModuleNotFoundError:
+    CHUNK=0
 
 
 class BaseIdTrackerAi(
@@ -290,6 +298,7 @@ class BaseIdTrackerAi(
             self.video_object = Video(
                 video_path=self.video_path,
                 open_multiple_files=self.open_multiple_files,
+                chunk=CHUNK
             )
             logger.info("FINISH: INIT VIDEO OBJECT")
         self.video_object.create_session_folder(self._session.value)
@@ -315,6 +324,7 @@ class BaseIdTrackerAi(
                 )
                 self._background_img = compute_background(
                     self.video_object.video_paths,
+                    self.video_object._chunk,
                     self.video_object.original_height,
                     self.video_object.original_width,
                     self.video_object.video_path,
