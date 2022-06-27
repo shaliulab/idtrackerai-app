@@ -20,6 +20,7 @@ setup(
     install_requires=[
         "rich",
         "pyforms-terminal==4.*",
+        "imgstore-shaliulab==0.4.7",
     ],
     extras_require={
         "gui": [
