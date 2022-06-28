@@ -17,6 +17,6 @@ build/
 
 dist/
 
-idtrackerai_app\.egg-info/
+*\.egg-info/
 
 release_steps.sh
