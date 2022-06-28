@@ -339,7 +339,11 @@ class BaseIdTrackerAi(
         self.video_object = np.load(video_path, allow_pickle=True).item()
         self.list_of_blobs=ListOfBlobs.load(self.video_object.blobs_path)
         if not self.list_of_blobs.blobs_are_connected:
-            self.list_of_blobs.compute_overlapping_between_subsequent_frames()
+            if conf.RECONNECT_BLOBS_FROM_CACHE:
+                self.list_of_blobs.reconect_from_cache()
+            else:
+                self.list_of_blobs.compute_overlapping_between_subsequent_frames()
+
         self.list_of_fragments=ListOfFragments.load(self.video_object.fragments_path)
         # tracker=TrackerAPI(self.video_object, self.list_of_blobs, self.list_of_fragments)
         # self.list_of_global_fragments=tracker._get_global_fragments()
