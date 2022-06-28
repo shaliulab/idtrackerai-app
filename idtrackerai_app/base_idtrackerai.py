@@ -247,8 +247,7 @@ class BaseIdTrackerAi(
         self._points_list.enabled = status
 
 
-
-    def track_video_legacy(self):
+    def track_video(self):
         logger.info("Calling track_video")
         self._video.enabled = False
         self._session.enabled = False
@@ -327,11 +326,17 @@ class BaseIdTrackerAi(
         # which means they do not use the same resources
 
         logger.info("Loading objects to base_idtrackerai")
-
-        self.video_object = np.load(os.path.join(
+        video_path = os.path.join(
             os.path.dirname(self.video_path), conf.ANALYSIS_FOLDER, f"session_{str(self._session.value).zfill(6)}",
             "video_object.npy"
-        ), allow_pickle=True).item()
+        )
+
+        if not os.path.exists(video_path):
+            raise Exception(f"{video_path} does not exist. Are you sure you have run preprocessing for that session?")
+            
+
+
+        self.video_object = np.load(video_path, allow_pickle=True).item()
         self.list_of_blobs=ListOfBlobs.load(self.video_object.blobs_path)
         if not self.list_of_blobs.blobs_are_connected:
             self.list_of_blobs.compute_overlapping_between_subsequent_frames()
