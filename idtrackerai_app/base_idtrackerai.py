@@ -292,13 +292,16 @@ class BaseIdTrackerAi(
             return success
 
         except Exception as e:
-            self.save()
             logger.error(e, exc_info=True)
             self.critical(str(e), "Error")
 
+        finally:
+            self.save()
 
     def tracking(self):
-            # Training and identification and post processing
+        # Training and identification and post processing
+        self.load()
+        self._step1_get_user_defined_parameters()
         try:
             success = self._step3_tracking()
             if success:
@@ -306,9 +309,11 @@ class BaseIdTrackerAi(
                 logger.info("Success")
 
         except Exception as e:
-            self.save()
             logger.error(e, exc_info=True)
             self.critical(str(e), "Error")
+
+        finally:
+            self.save()
 
     def load(self):
         ########################################
@@ -322,9 +327,13 @@ class BaseIdTrackerAi(
         # which means they do not use the same resources
 
         logger.info("Loading objects to base_idtrackerai")
-        self.video_object = np.load(os.path.join(self._session.value, "video_object.npy"), allow_pickle=True).item()
+
+        self.video_object = np.load(os.path.join(
+            os.path.dirname(self.video_path), conf.ANALYSIS_FOLDER, f"session_{str(self._session.value).zfill(6)}",
+            "video_object.npy"
+        ), allow_pickle=True).item()
         self.list_of_blobs=ListOfBlobs.load(self.video_object.blobs_path)
-        if self.list_of_blobs.blobs_are_not_connected:
+        if not self.list_of_blobs.blobs_are_connected:
             self.list_of_blobs.compute_overlapping_between_subsequent_frames()
         self.list_of_fragments=ListOfFragments.load(self.video_object.fragments_path)
         # tracker=TrackerAPI(self.video_object, self.list_of_blobs, self.list_of_fragments)
