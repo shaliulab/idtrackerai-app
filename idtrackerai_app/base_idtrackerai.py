@@ -28,6 +28,13 @@ from .gui.roi_selection import ROISelectionWin
 from .gui.setup_points_selection import SetupInfoWin
 from .gui.player_win_interactions import PlayerWinInteractions
 
+from idtrackerai.list_of_blobs import ListOfBlobs
+from idtrackerai.list_of_fragments import ListOfFragments
+from idtrackerai.list_of_global_fragments import (
+    ListOfGlobalFragments,
+    create_list_of_global_fragments
+)
+
 
 logger = logging.getLogger(__name__)
 try:
@@ -239,7 +246,9 @@ class BaseIdTrackerAi(
         self._add_setup_info.enabled = status
         self._points_list.enabled = status
 
-    def track_video(self):
+
+
+    def track_video_legacy(self):
         logger.info("Calling track_video")
         self._video.enabled = False
         self._session.enabled = False
@@ -268,6 +277,59 @@ class BaseIdTrackerAi(
         self._video.enabled = True
         self._session.enabled = True
         self.set_controls_enabled(True)
+
+
+    def preprocessing(self):
+
+        try:
+            # Init tracking manager
+            self._step0_init_video_object()
+            self._step1_get_user_defined_parameters()
+            # Preprocessing
+            # success will be False if there are more blobs than animals and
+            # the user asked to check the segmentation consistency
+            success = self._step2_pre_processing()
+            return success
+
+        except Exception as e:
+            self.save()
+            logger.error(e, exc_info=True)
+            self.critical(str(e), "Error")
+
+
+    def tracking(self):
+            # Training and identification and post processing
+        try:
+            success = self._step3_tracking()
+            if success:
+                # This flag is important to register the smoke tests that work
+                logger.info("Success")
+
+        except Exception as e:
+            self.save()
+            logger.error(e, exc_info=True)
+            self.critical(str(e), "Error")
+
+    def load(self):
+        ########################################
+        # TODO
+        # Ensure state is preserved!
+        ########################################
+        #
+        # This function is essential if I want to run preprocess and tracking
+        # asynchronously (i.e. not necessarily right after within the same process)
+        # This makes sense because preprocess is CPU bound and tracking GPU-bound
+        # which means they do not use the same resources
+
+        logger.info("Loading objects to base_idtrackerai")
+        self.video_object = np.load(os.path.join(self._session.value, "video_object.npy"), allow_pickle=True).item()
+        self.list_of_blobs=ListOfBlobs.load(self.video_object.blobs_path)
+        if self.list_of_blobs.blobs_are_not_connected:
+            self.list_of_blobs.compute_overlapping_between_subsequent_frames()
+        self.list_of_fragments=ListOfFragments.load(self.video_object.fragments_path)
+        # tracker=TrackerAPI(self.video_object, self.list_of_blobs, self.list_of_fragments)
+        # self.list_of_global_fragments=tracker._get_global_fragments()
+
 
     def save(self):
         logger.info("Saving objects from base_idtrackerai")
