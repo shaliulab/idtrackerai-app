@@ -20,7 +20,7 @@ setup(
     install_requires=[
         "rich",
         "pyforms-terminal==4.*",
-        "imgstore-shaliulab==0.4.7",
+        "imgstore-shaliulab>=0.4.9",
     ],
     extras_require={
         "gui": [
@@ -33,6 +33,7 @@ setup(
     entry_points={
         "console_scripts": [
             "idtrackerai=idtrackerai_app.__main__:start",
+            "idtrackerai_cli=idtrackerai_app.cli.__main__:start",
         ],
     },
 )
