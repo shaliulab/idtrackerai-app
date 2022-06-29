@@ -1,5 +1,6 @@
 import argparse
 import shutil
+import json
 import os.path
 import logging
 
@@ -9,7 +10,12 @@ from imgstore.constants import STORE_MD_FILENAME
 from idtrackerai.constants import ANALYSIS_FOLDER
 
 from .utils import write_shell_script, ts_sub
+TS_JSON=os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "ts.json"
+)
 
+assert os.path.exists(TS_JSON)
 logger = logging.getLogger(__name__)
 
 def get_parser():
@@ -40,29 +46,45 @@ def main():
     os.makedirs(working_dir, exist_ok=True)
     os.chdir(working_dir)
 
-    lines = [
-        "SETTINGS_PRIORITY=1",
-        f"CHUNK={args.chunk}",
-        "COLOR=False",
-        "READ_FORMAT=\"imgstore\"",
-        "MULTI_STORE_ENABLED=False",
-        "NUMBER_OF_JOBS_FOR_BACKGROUND_SUBTRACTION=12",
-        "NUMBER_OF_JOBS_FOR_CONNECTING_BLOBS=12",
-        "NUMBER_OF_JOBS_FOR_SEGMENTATION=12",
-        "NUMBER_OF_JOBS_FOR_SETTING_ID_IMAGES=12",
-        "RECONNECT_BLOBS_FROM_CACHE=True",
-        "MAX_RATIO_OF_PRETRAINED_IMAGES=0.80",
-        "THRESHOLD_EARLY_STOP_ACCUMULATION=0.80",
-        "POSTPROCESS_IMPOSSIBLE_JUMPS=False",
-        "DISABLE_PROTOCOL_3=True",
-    ]
+    # lines = [
+    #     "SETTINGS_PRIORITY=1",
+    #     f"CHUNK={args.chunk}",
+    #     "COLOR=False",
+    #     "READ_FORMAT=\"imgstore\"",
+    #     "MULTI_STORE_ENABLED=False",
+    #     "NUMBER_OF_JOBS_FOR_BACKGROUND_SUBTRACTION=12",
+    #     "NUMBER_OF_JOBS_FOR_CONNECTING_BLOBS=12",
+    #     "NUMBER_OF_JOBS_FOR_SEGMENTATION=12",
+    #     "NUMBER_OF_JOBS_FOR_SETTING_ID_IMAGES=12",
+    #     "RECONNECT_BLOBS_FROM_CACHE=True",
+    #     "MAX_RATIO_OF_PRETRAINED_IMAGES=0.80",
+    #     "THRESHOLD_EARLY_STOP_ACCUMULATION=0.80",
+    #     "POSTPROCESS_IMPOSSIBLE_JUMPS=False",
+    #     "DISABLE_PROTOCOL_3=True",
+    # ]
+
+    with open(TS_JSON, "r") as filehandle:
+        ts_config=json.load(filehandle)
+
+    lines = []
+    for entry in ts_config:
+        if type(ts_config[entry]) is str:
+            lines.append(f"{entry}=\"{ts_config[entry]}\"")
+        else:
+            lines.append(f"{entry}={ts_config[entry]}")
+    print(lines)
+    lines.append(f"CHUNK={args.chunk}")
 
     with open("local_settings.py", "w") as filehandle:
         for line in lines:
             filehandle.write(f"{line}\n")
 
     shutil.copy("local_settings.py", os.path.join(f"session_{chunk_pad}-local_settings.py"))
-    os.remove(chunk_pad+extension)
+    if os.path.exists(chunk_pad+extension):
+        if os.path.islink(chunk_pad+extension):
+            os.remove(chunk_pad+extension)
+        else:
+            raise Exception("An actual video has been found on the analysis folder. Only softlinks should be present")
     os.symlink(os.path.join("..", chunk_pad+extension), chunk_pad+extension)
     if not os.path.exists(f"{args.experiment}.conf"):
         os.symlink(os.path.join("..", f"{args.experiment}.conf"), f"{args.experiment}.conf")
@@ -75,6 +97,7 @@ def main():
     logger.debug(f"Running {cmd} with ts")
 
     write_shell_script(session_script, [cmd])
+    shutil.copyfile(session_script, os.path.join(os.path.dirname(os.path.dirname(session_script)), os.path.basename(session_script)))
     cwd=os.path.join(args.root_dir, args.experiment, ANALYSIS_FOLDER)
-    ts_sub(session_script, output_file, gpu=args.command=="tracking", cwd=cwd)      
+    ts_sub(session_script, output_file, gpu=True, cwd=cwd, append=args.command=="tracking")    
     os.chdir(args.root_dir)

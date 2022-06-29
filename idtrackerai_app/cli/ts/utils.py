@@ -17,15 +17,21 @@ def write_shell_script(path, lines):
     return os.path.exists(path)
 
 
-def ts_sub(script, output, gpu=False, cwd=None):
+def ts_sub(script, output, gpu=False, cwd=None, append=False):
     
     if gpu:
-        gpu_requirement = "-G 1"
+        gpu_requirement = "-g 0"
     else:
         gpu_requirement = "-G 0"
+
+
+    if append:
+        operator = ">>"
+    else:
+        operator = ">"
    
 
-    ts_cmd = f"bash -c \"{script}  > {output} 2>&1\""
+    ts_cmd = f"bash -c \"{script} {operator} {output} 2>&1\""
     ts_prefix = f"ts -n {gpu_requirement}"
     final_cmd=f"{ts_prefix} {ts_cmd}"
     cmd_list = shlex.split(final_cmd)
