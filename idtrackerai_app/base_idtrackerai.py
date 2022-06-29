@@ -1,5 +1,5 @@
 import numpy as np, os, logging
-
+import warnings
 from confapp import conf, load_config
 
 from pyforms.basewidget import BaseWidget
@@ -295,7 +295,11 @@ class BaseIdTrackerAi(
             self.critical(str(e), "Error")
 
         finally:
-            self.save()
+            try:
+                self.save()
+            except Exception as error:
+                warnings.warn("Could not save data. All preprocessing is lost")
+                warnings.warn(error, stacklevel=2)
 
     def tracking(self):
         # Training and identification and post processing
@@ -551,6 +555,9 @@ class BaseIdTrackerAi(
             else:
                 tracker.track_multiple_animals()
                 self.list_of_fragments.update_identification_images_dataset()
+
+            if self.video_object.estimated_accuracy is None:
+                self.video_object.compute_estimated_accuracy()
 
             logger.info(
                 "Estimated accuracy: {}".format(
