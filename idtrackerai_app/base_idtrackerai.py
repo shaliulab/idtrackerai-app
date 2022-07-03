@@ -297,6 +297,7 @@ class BaseIdTrackerAi(
         finally:
             try:
                 self.save()
+                logger.info("DONE 100%: Preprocessing")
             except Exception as error:
                 warnings.warn("Could not save data. All preprocessing is lost")
                 warnings.warn(error, stacklevel=2)
@@ -317,6 +318,7 @@ class BaseIdTrackerAi(
 
         finally:
             self.save()
+            logger.info("DONE 100%: Tracking")
 
     def load(self):
         ########################################
@@ -560,7 +562,7 @@ class BaseIdTrackerAi(
                 self.video_object.compute_estimated_accuracy()
 
             logger.info(
-                "Estimated accuracy: {}".format(
+                "\nEstimated accuracy: {}".format(
                     self.video_object.estimated_accuracy
                 )
             )
