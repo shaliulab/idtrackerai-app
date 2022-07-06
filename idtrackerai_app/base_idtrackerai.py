@@ -355,7 +355,7 @@ class BaseIdTrackerAi(
         self.list_of_blobs=ListOfBlobs.load(self.video_object.blobs_path)
         if not self.list_of_blobs.blobs_are_connected:
             if conf.RECONNECT_BLOBS_FROM_CACHE:
-                self.list_of_blobs.reconect_from_cache()
+                self.list_of_blobs.reconnect_from_cache()
             else:
                 self.list_of_blobs.compute_overlapping_between_subsequent_frames()
 
