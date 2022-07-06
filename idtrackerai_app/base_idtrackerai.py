@@ -12,6 +12,15 @@ from pyforms.controls import ControlBoundingSlider
 from pyforms.controls import ControlNumber
 from pyforms.controls import ControlProgress
 
+try:
+    import idtrackerai
+except ModuleNotFoundError as error:
+    import sys
+    print("Cannot load idtrackerai")
+    print(f"PYTHON PATH: {sys.path}")
+    raise error
+
+
 from idtrackerai.animals_detection.segmentation_utils import (
     compute_background,
 )
