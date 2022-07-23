@@ -1,5 +1,5 @@
 import os, subprocess, cv2, numpy as np, sys
-import glob
+import glob, json
 from confapp import conf
 
 from PyQt5.QtWidgets import QApplication
@@ -14,7 +14,9 @@ from idtrackerai.postprocessing.individual_videos import (
 from idtrackerai.postprocessing.trajectories_to_video import (
     generate_trajectories_video,
 )
-
+from idtrackerai.trajectories import (
+    load_trajectories,
+)
 from pyforms.controls import ControlButton
 from pyforms.controls import ControlPlayer
 from pyforms.controls import ControlCheckBox
@@ -245,7 +247,8 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         (boxes, _, _, areas, _, contours, _,) = _process_frame(
             frame,
             animal_detection_parameters,
-            -1,  # Get frame_number from the Widget
+            self._player._current_frame_index,
+            # -1,  # Get frame_number from the Widget
             save_pixels="NONE",
             save_segmentation_image="NONE",
         )
@@ -452,6 +455,43 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
     def open_multiple_files(self):
         return self._player.multiple_files
 
+    def ask(self, question):
+
+        reply = QMessageBox(
+            QMessageBox.Question,
+            "Overwrite or load",
+            question,
+            QMessageBox.No | QMessageBox.Yes
+        ).exec_()
+
+        if reply == QMessageBox.Yes:
+            return True
+        else:
+            return False
+
+
+    def save_window(self):
+        if conf.PYFORMS_MODE == "GUI":
+            config_file = self._session.value + ".conf"
+
+            if os.path.exists(config_file):
+
+                overwrite = self.ask("""A config file with same name exists.
+                Do you want to overwrite it?
+                Otherwise I will load from it
+                """)
+
+                if overwrite:
+                    return super(BaseIdTrackerAi, self).save_window()
+                else:
+                    with open(config_file, "r") as fh:
+                        data = json.load(fh)
+                    return self.load_form(data)
+
+            else:
+                return super(BaseIdTrackerAi, self).save_window()
+        else:
+            return None
 
 def get_video_object_and_trajectories(video_path, session_name):
     video_folder = os.path.dirname(video_path)
@@ -476,7 +516,12 @@ def get_video_object_and_trajectories(video_path, session_name):
             -1
         ]
 
-    trajectories = np.load(trajectories_file, allow_pickle=True).item()[
+    # NOTE
+    # trajectories are loaded here
+    # trajectories = np.load(trajectories_file, allow_pickle=True).item()[
+    #     "trajectories"
+    # ]
+    trajectories=load_trajectories(trajectories_file)[
         "trajectories"
     ]
 

@@ -67,6 +67,12 @@ def main():
     with open(TS_JSON, "r") as filehandle:
         ts_config = json.load(filehandle)
 
+
+    if args.experiment == "lowres":
+        ts_config["SIGMA_GAUSSIAN_BLURRING"] = 2
+        ts_config["ADVANCED_SEGMENTATION"] = True
+
+
     lines = []
     for entry in ts_config:
         if type(ts_config[entry]) is str:

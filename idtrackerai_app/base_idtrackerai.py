@@ -1,4 +1,5 @@
 import numpy as np, os, logging
+import time
 import warnings
 from confapp import conf, load_config
 
@@ -55,7 +56,7 @@ except ImportError:
 
 try:
     import imgstore.constants
-    CHUNK = load_config(imgstore.constants).CHUNK
+    CHUNK = getattr(load_config(imgstore.constants), "CHUNK", 0)
     logger.info(f"Selected chunk={CHUNK}")
 
 except ModuleNotFoundError:
@@ -288,10 +289,19 @@ class BaseIdTrackerAi(
 
 
     def preprocessing(self):
+        """
+        Segment the input video and produce
+        
+        * list_of_blobs
+        * list_of_fragments
+        * list_of_global_fragments
+        """
+
+        preprocessing_start = time.time()
+        self._step0_init_video_object()
 
         try:
             # Init tracking manager
-            self._step0_init_video_object()
             self._step1_get_user_defined_parameters()
             # Preprocessing
             # success will be False if there are more blobs than animals and
@@ -299,20 +309,28 @@ class BaseIdTrackerAi(
             success = self._step2_pre_processing()
             return success
 
-        except Exception as e:
-            logger.error(e, exc_info=True)
-            self.critical(str(e), "Error")
+        except Exception as error:
+            logger.error(error, exc_info=True)
+            self.critical(str(error), "Error")
+            try:
+                self.save()
+            except:
+                pass
+            raise error
 
         finally:
             try:
                 self.save()
-                logger.info("DONE 100%: Preprocessing")
+                preprocessing_end = time.time()
+                logger.info(f"DONE preprocessing in {preprocessing_end - preprocessing_start} seconds")
             except Exception as error:
                 warnings.warn("Could not save data. All preprocessing is lost")
                 warnings.warn(error, stacklevel=2)
+        
 
     def tracking(self):
         # Training and identification and post processing
+        tracking_start = time.time()
         self.load()
         self._step1_get_user_defined_parameters()
         try:
@@ -327,7 +345,8 @@ class BaseIdTrackerAi(
 
         finally:
             self.save()
-            logger.info("DONE 100%: Tracking")
+            tracking_end = time.time()
+            logger.info(f"DONE tracking in {tracking_end - tracking_start} seconds")
 
     def load(self):
         ########################################
