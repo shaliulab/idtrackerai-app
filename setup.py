@@ -34,6 +34,7 @@ setup(
         # If any package contains *.txt or *.rst files, include them:
         '': ['*.json'],
     },
+    include_package_data=True,
     entry_points={
         "console_scripts": [
             "idtrackerai=idtrackerai_app.__main__:start",
