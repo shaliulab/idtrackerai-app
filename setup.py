@@ -30,6 +30,10 @@ setup(
         ],
         "only-gui": ["pyforms-gui==4.904.152"],
     },
+    package_data = {
+        # If any package contains *.txt or *.rst files, include them:
+        '': ['*.json'],
+    },
     entry_points={
         "console_scripts": [
             "idtrackerai=idtrackerai_app.__main__:start",
