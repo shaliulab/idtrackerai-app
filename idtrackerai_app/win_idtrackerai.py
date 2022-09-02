@@ -222,6 +222,14 @@ class IdTrackerAiGUI(BaseIdTrackerAi):
         """
         # Save original shape to rescale if resolution reduction is applied
         original_size = frame.shape[1], frame.shape[0]  # (width, height)
+        def ensure_color(frame):
+            if len(frame.shape) == 3:
+                return frame
+            else:
+                return cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
+ 
+        frame = ensure_color(frame)
+
         self._frame_width = original_size[0]
         self._frame_height = original_size[1]
         # TODO: check if bkgmodel needs to be updated because of new ROI
