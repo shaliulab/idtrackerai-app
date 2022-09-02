@@ -45,11 +45,9 @@ from idtrackerai.list_of_global_fragments import (
     create_list_of_global_fragments
 )
 
-
 logger = logging.getLogger(__name__)
 try:
     import local_settings # type: ignore
-
     conf += local_settings
 except ImportError:
     logger.info("Local settings file not available.")
@@ -331,7 +329,7 @@ class BaseIdTrackerAi(
     def tracking(self):
         # Training and identification and post processing
         tracking_start = time.time()
-        self.load()
+        self.load(preferred="_feed_integration")
         self._step1_get_user_defined_parameters()
         try:
             success = self._step3_tracking()
@@ -347,8 +345,23 @@ class BaseIdTrackerAi(
             self.save()
             tracking_end = time.time()
             logger.info(f"DONE tracking in {tracking_end - tracking_start} seconds")
+            
+            
+    @staticmethod
+    def select_preferred_path(path, preferred):
+        
+        if preferred is None:
+            return path
 
-    def load(self):
+        _, ext = os.path.splitext(path)
+        preferred_path = path.replace(ext, preferred+ext)
+        if os.path.exists(preferred_path):
+            path = preferred_path
+        
+        return path
+
+
+    def load(self, preferred=None):
         ########################################
         # TODO
         # Ensure state is preserved!
@@ -360,25 +373,31 @@ class BaseIdTrackerAi(
         # which means they do not use the same resources
 
         logger.info("Loading objects to base_idtrackerai")
-        video_path = os.path.join(
-            os.path.dirname(self.video_path), conf.ANALYSIS_FOLDER, f"session_{str(self._session.value).zfill(6)}",
-            "video_object.npy"
+        video_path = self.select_preferred_path(
+            os.path.join(
+                os.path.dirname(self.video_path), conf.ANALYSIS_FOLDER, f"session_{str(self._session.value).zfill(6)}",
+                "video_object.npy"
+            ),
+            preferred
         )
 
         if not os.path.exists(video_path):
             raise Exception(f"{video_path} does not exist. Are you sure you have run preprocessing for that session?")
-            
-
 
         self.video_object = np.load(video_path, allow_pickle=True).item()
-        self.list_of_blobs=ListOfBlobs.load(self.video_object.blobs_path)
+
+        blobs_path = self.select_preferred_path(self.video_object.blobs_path, preferred)
+        fragments_path = self.select_preferred_path(self.video_object.fragments_path, preferred)
+            
+        self.list_of_blobs=ListOfBlobs.load(blobs_path)
+        self.list_of_fragments=ListOfFragments.load(fragments_path)
+
         if not self.list_of_blobs.blobs_are_connected:
             if conf.RECONNECT_BLOBS_FROM_CACHE:
                 self.list_of_blobs.reconnect_from_cache()
             else:
                 self.list_of_blobs.compute_overlapping_between_subsequent_frames()
 
-        self.list_of_fragments=ListOfFragments.load(self.video_object.fragments_path)
         # tracker=TrackerAPI(self.video_object, self.list_of_blobs, self.list_of_fragments)
         # self.list_of_global_fragments=tracker._get_global_fragments()
 
