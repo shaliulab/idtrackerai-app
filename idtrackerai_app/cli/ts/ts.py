@@ -24,6 +24,9 @@ def get_parser():
     ap.add_argument("--chunk", required=True, type=int)
     ap.add_argument("--command", required=False)
     ap.add_argument("--wait_for", type=int, nargs="+", required=False, default=[])
+    ap.add_argument("--reconnect-blobs-from-cache", action="store_true", default=None)
+    ap.add_argument("--submit", action="store_true", dest="submit", default=True)
+    ap.add_argument("--no-submit", action="store_false", dest="submit", default=True)
     return ap
 
 
@@ -46,7 +49,9 @@ def main():
     working_dir = os.path.join(args.experiment, ANALYSIS_FOLDER)
     os.makedirs(working_dir, exist_ok=True)
     os.chdir(working_dir)
-
+    # "MAX_RATIO_OF_PRETRAINED_IMAGES": 0.80,
+    # "THRESHOLD_EARLY_STOP_ACCUMULATION": 0.80,
+    
     # lines = [
     #     "SETTINGS_PRIORITY=1",
     #     f"CHUNK={args.chunk}",
@@ -69,9 +74,12 @@ def main():
 
 
     if args.experiment == "lowres":
-        ts_config["SIGMA_GAUSSIAN_BLURRING"] = 2
-        ts_config["ADVANCED_SEGMENTATION"] = True
-
+        # ts_config["SIGMA_GAUSSIAN_BLURRING"] = 2
+        ts_config["ADVANCED_SEGMENTATION"] = False
+        ts_config["SKIP_SAVING_IDENTIFICATION_IMAGES"] = True
+    
+    if args.reconnect_blobs_from_cache is not None:
+        ts_config["RECONNECT_BLOBS_FROM_CACHE"] = args.reconnect_blobs_from_cache
 
     lines = []
     for entry in ts_config:
@@ -107,42 +115,63 @@ def main():
     cwd = os.path.join(args.root_dir, args.experiment, ANALYSIS_FOLDER)
 
     if args.command is None:
-        preprocessing_id = make_session_script_and_run(
+        session = make_session_script(
             config_file=config_file,
             chunk=args.chunk,
             command="preprocessing",
-            cwd=cwd,
             before=[copy_local_settings_cmd],
             wait_for=args.wait_for,
         )
+        
+        if args.submit:
+            preprocessing_id = submit_to_ts(*session, wd=cwd)
 
         if preprocessing_id is None:
             return
 
-        tracking_id = make_session_script_and_run(
+        session = make_session_script(
             config_file=config_file,
             chunk=args.chunk,
             command="tracking",
-            cwd=cwd,
             before=[copy_local_settings_cmd],
             wait_for=[preprocessing_id] + args.wait_for,
         )
+        if args.submit:
+            preprocessing_id = submit_to_ts(*session, wd=cwd)
+
 
     else:
-        make_session_script_and_run(
+        session = make_session_script(
             config_file=config_file,
             chunk=args.chunk,
             command=args.command,
-            cwd=cwd,
             before=[copy_local_settings_cmd],
             wait_for=args.wait_for,
         )
+        if args.submit:
+            preprocessing_id = submit_to_ts(*session, wd=cwd)
 
     os.chdir(args.root_dir)
 
 
-def make_session_script_and_run(
-    config_file, chunk, command, cwd, before=[], wait_for=[]
+def submit_to_ts(session_script, output_file, label, wait_for, command, wd):
+
+    print(f"Submitting job with label: {label}")
+
+    process_id = ts_sub(
+        session_script,
+        output_file,
+        gpu=True,
+        cwd=wd,
+        append=command == "tracking",
+        label=label,
+        wait_for=wait_for,
+    )
+    return process_id
+
+
+def make_session_script(
+    config_file, chunk, command, before=[], wait_for=[]
 ):
 
     chunk_pad = str(chunk).zfill(6)
@@ -158,23 +187,15 @@ def make_session_script_and_run(
 
     label = f"{chunk}_{command}"
 
-    print(f"Submitting job with label: {label}")
-
+    path = os.path.join(
+        os.path.dirname(os.path.dirname(session_script)),
+        os.path.basename(session_script),
+    )
     write_shell_script(session_script, [*before, cmd])
     shutil.copyfile(
         session_script,
-        os.path.join(
-            os.path.dirname(os.path.dirname(session_script)),
-            os.path.basename(session_script),
-        ),
+        path,
     )
-    process_id = ts_sub(
-        session_script,
-        output_file,
-        gpu=True,
-        cwd=cwd,
-        append=command == "tracking",
-        label=label,
-        wait_for=wait_for,
-    )
-    return process_id
+    print(f"Saving {path}")
+    
+    return session_script, output_file, label, wait_for, command

@@ -96,7 +96,7 @@ def ts_sub(
             break
 
     if process_id is None:
-        warnings.warn(f"Could not find process with label {ts_label}!")
+        warnings.warn(f"Could not find process with label {ts_label}!", stacklevel=2)
 
     return process_id
 
