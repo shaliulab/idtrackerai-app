@@ -268,7 +268,7 @@ class BaseIdTrackerAi(
             # Preprocessing
             # success will be False if there are more blobs than animals and
             # the user asked to check the segmentation consistency
-            success = self._step2_pre_processing()
+            success = self._step2_preprocessing()
             # Training and identification and post processing
             if success:
                 success = self._step3_tracking()
@@ -304,7 +304,7 @@ class BaseIdTrackerAi(
             # Preprocessing
             # success will be False if there are more blobs than animals and
             # the user asked to check the segmentation consistency
-            success = self._step2_pre_processing()
+            success = self._step2_preprocessing_segmentation()
             return success
 
         except Exception as error:
@@ -324,7 +324,22 @@ class BaseIdTrackerAi(
             except Exception as error:
                 warnings.warn("Could not save data. All preprocessing is lost")
                 warnings.warn(error, stacklevel=2)
-        
+
+    def crossings_detection_and_fragmentation(self):
+        fragmentation_start=time.time()
+        self.load()
+        self._step1_get_user_defined_parameters()
+        try:       
+            self._step2_preprocessing_crossings_detection_and_fragmentation()
+
+        except Exception as e:
+            logger.error(e, exc_info=True)
+            self.critical(str(e), "Error")
+            
+        finally:
+            self.save()
+            fragmentation_end=time.time()
+            logger.info(f"DONE tracking in {fragmentation_end - fragmentation_start} seconds")
 
     def tracking(self):
         # Training and identification and post processing
@@ -385,12 +400,14 @@ class BaseIdTrackerAi(
             raise Exception(f"{video_path} does not exist. Are you sure you have run preprocessing for that session?")
 
         self.video_object = np.load(video_path, allow_pickle=True).item()
-
         blobs_path = self.select_preferred_path(self.video_object.blobs_path, preferred)
-        fragments_path = self.select_preferred_path(self.video_object.fragments_path, preferred)
             
         self.list_of_blobs=ListOfBlobs.load(blobs_path)
-        self.list_of_fragments=ListOfFragments.load(fragments_path)
+        try:
+            fragments_path = self.select_preferred_path(self.video_object.fragments_path, preferred)
+            self.list_of_fragments=ListOfFragments.load(fragments_path)
+        except:
+            self.list_of_fragments=None
 
         if not self.list_of_blobs.blobs_are_connected:
             if conf.RECONNECT_BLOBS_FROM_CACHE:
@@ -457,12 +474,12 @@ class BaseIdTrackerAi(
                 )
                 self._background_img = compute_background(
                     self.video_object.video_paths,
-                    self.video_object._chunk,
                     self.video_object.original_height,
                     self.video_object.original_width,
                     self.video_object.video_path,
-                    self._mask_img,
-                    self.video_object.episodes_start_end,
+                    chunk=self.video_object._chunk,
+                    original_ROI=self._mask_img,
+                    episodes_start_end=self.video_object.episodes_start_end,
                 )
             else:
                 logger.info("Storing previously computed background model")
@@ -544,8 +561,12 @@ class BaseIdTrackerAi(
         )
         self._progress.value = 0
         self._final_message = self.SEGMENTATION_CHECK_FINAL_MESSAGE
+        
+    def _step2_preprocessing(self):
+        self._step2_preprocessing_segmentation()
+        return self._step2_preprocessing_crossings_detection_and_fragmentation()
 
-    def _step2_pre_processing(self):
+    def _step2_preprocessing_segmentation(self):
 
         logger.info("START: ANIMAL DETECTION")
         animals_detector = AnimalsDetectionAPI(self.video_object)
@@ -559,6 +580,8 @@ class BaseIdTrackerAi(
             return False  # This will make the tracking finish
         self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
+        
+    def _step2_preprocessing_crossings_detection_and_fragmentation(self):
 
         logger.info("START: CROSSING DETECTION")
         crossings_detector = CrossingsDetectionAPI(
