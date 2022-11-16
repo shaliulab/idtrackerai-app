@@ -25,8 +25,10 @@ def get_parser():
     ap.add_argument("--command", required=False)
     ap.add_argument("--wait_for", type=int, nargs="+", required=False, default=[])
     ap.add_argument("--reconnect-blobs-from-cache", action="store_true", default=None)
+    ap.add_argument("--skip-saving-identification-images", action="store_true", default=False)
     ap.add_argument("--submit", action="store_true", dest="submit", default=True)
     ap.add_argument("--no-submit", action="store_false", dest="submit", default=True)
+    ap.add_argument("--skip-every-frame", default=1, type=int, help="If differnt from 1, only every skip-every-frameth is analyzed, and all others will have no blobs")
     return ap
 
 
@@ -35,18 +37,37 @@ def main():
     ap = get_parser()
     args = ap.parse_args()
     if args.command is not None:
-        if not args.command in ["preprocessing", "tracking", "track_video"]:
+        if not args.command in ["preprocessing", "tracking", "track_video", "crossings_detection_and_fragmentation"]:
             raise Exception("Invalid")
+        
+        
+    root_dir = args.root_dir
+    
+    chunk = args.chunk
+    experiment = args.experiment
+    reconnect_blobs_from_cache=args.reconnect_blobs_from_cache
+    skip_saving_identification_images=args.skip_saving_identification_images
+    skip_every_frame=args.skip_every_frame
+    submit=args.submit
+    command=args.command
+    wait_for=args.wait_for
+    store_path=os.path.join(root_dir, experiment, STORE_MD_FILENAME)
 
-    os.chdir(args.root_dir)
+    push_idtrackerai_job_to_ts(root_dir, store_path, chunk, command, reconnect_blobs_from_cache, skip_saving_identification_images, skip_every_frame=skip_every_frame, wait_for=wait_for, submit=submit)
+    
+def push_idtrackerai_job_to_ts(root_dir, store_path, chunk, command, reconnect_blobs_from_cache, skip_saving_identification_images, skip_every_frame=1, wait_for=[], submit=True):
 
-    chunk_pad = str(args.chunk).zfill(6)
-    metadata_path = os.path.join(args.experiment, STORE_MD_FILENAME)
+    os.chdir(root_dir)
+
+    chunk_pad = str(chunk).zfill(6)
+    metadata_path = store_path
+    experiment = os.path.basename(os.path.dirname(store_path))
+    
     with open(metadata_path, "r") as filehandle:
         extension = yaml.load(filehandle, yaml.SafeLoader)["__store"]["extension"]
 
-    logger.info(f"Making {args.experiment}/idtrackerai")
-    working_dir = os.path.join(args.experiment, ANALYSIS_FOLDER)
+    logger.info(f"Making {experiment}/idtrackerai")
+    working_dir = os.path.join(experiment, ANALYSIS_FOLDER)
     os.makedirs(working_dir, exist_ok=True)
     os.chdir(working_dir)
     # "MAX_RATIO_OF_PRETRAINED_IMAGES": 0.80,
@@ -73,13 +94,15 @@ def main():
         ts_config = json.load(filehandle)
 
 
-    if args.experiment == "lowres":
+    ts_config["SKIP_SAVING_IDENTIFICATION_IMAGES"] = skip_saving_identification_images
+    ts_config["SKIP_EVERY_FRAME"] = skip_every_frame
+        
+    if experiment == "lowres":
         # ts_config["SIGMA_GAUSSIAN_BLURRING"] = 2
         ts_config["ADVANCED_SEGMENTATION"] = False
-        ts_config["SKIP_SAVING_IDENTIFICATION_IMAGES"] = True
     
-    if args.reconnect_blobs_from_cache is not None:
-        ts_config["RECONNECT_BLOBS_FROM_CACHE"] = args.reconnect_blobs_from_cache
+    if reconnect_blobs_from_cache is not None:
+        ts_config["RECONNECT_BLOBS_FROM_CACHE"] = reconnect_blobs_from_cache
 
     lines = []
     for entry in ts_config:
@@ -88,7 +111,7 @@ def main():
         else:
             lines.append(f"{entry}={ts_config[entry]}")
 
-    lines.append(f"CHUNK={args.chunk}")
+    lines.append(f"CHUNK={chunk}")
     LOCAL_SETTINGS = os.path.join(f"session_{chunk_pad}-local_settings.py")
 
     with open(LOCAL_SETTINGS, "w") as filehandle:
@@ -103,27 +126,27 @@ def main():
                 "An actual video has been found on the analysis folder. Only softlinks should be present"
             )
     os.symlink(os.path.join("..", chunk_pad + extension), chunk_pad + extension)
-    if not os.path.exists(f"{args.experiment}.conf"):
+    if not os.path.exists(f"{experiment}.conf"):
         os.symlink(
-            os.path.join("..", f"{args.experiment}.conf"), f"{args.experiment}.conf"
+            os.path.join("..", f"{experiment}.conf"), f"{experiment}.conf"
         )
 
     config_file = (
-        os.path.join(args.root_dir, args.experiment, args.experiment) + ".conf"
+        os.path.join(root_dir, experiment, experiment) + ".conf"
     )
     copy_local_settings_cmd = f"cp {LOCAL_SETTINGS} local_settings.py"
-    cwd = os.path.join(args.root_dir, args.experiment, ANALYSIS_FOLDER)
+    cwd = os.path.join(root_dir, experiment, ANALYSIS_FOLDER)
 
-    if args.command is None:
+    if command is None:
         session = make_session_script(
             config_file=config_file,
-            chunk=args.chunk,
+            chunk=chunk,
             command="preprocessing",
             before=[copy_local_settings_cmd],
-            wait_for=args.wait_for,
+            wait_for=wait_for,
         )
         
-        if args.submit:
+        if submit:
             preprocessing_id = submit_to_ts(*session, wd=cwd)
 
         if preprocessing_id is None:
@@ -131,27 +154,27 @@ def main():
 
         session = make_session_script(
             config_file=config_file,
-            chunk=args.chunk,
+            chunk=chunk,
             command="tracking",
             before=[copy_local_settings_cmd],
-            wait_for=[preprocessing_id] + args.wait_for,
+            wait_for=[preprocessing_id] + wait_for,
         )
-        if args.submit:
+        if submit:
             preprocessing_id = submit_to_ts(*session, wd=cwd)
 
 
     else:
         session = make_session_script(
             config_file=config_file,
-            chunk=args.chunk,
-            command=args.command,
+            chunk=chunk,
+            command=command,
             before=[copy_local_settings_cmd],
-            wait_for=args.wait_for,
+            wait_for=wait_for,
         )
-        if args.submit:
+        if submit:
             preprocessing_id = submit_to_ts(*session, wd=cwd)
 
-    os.chdir(args.root_dir)
+    os.chdir(root_dir)
 
 
 def submit_to_ts(session_script, output_file, label, wait_for, command, wd):

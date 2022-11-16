@@ -48,7 +48,11 @@ class ROISelectionWin(object):
                 if isinstance(row, str):
                     points = eval(row)
                 elif isinstance(row[0], str):
-                    points = eval(row[0])
+                    try:
+                        points = eval(row[0])
+                    except RecursionError as error:
+                        print(row[0])
+                        points = eval(row[0])
                 else:
                     points = row
                 if len(points) < 3:
