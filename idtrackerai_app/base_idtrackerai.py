@@ -1,7 +1,7 @@
 import numpy as np, os, logging
 import time
 import warnings
-from confapp import conf, load_config
+from confapp import conf
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
@@ -51,14 +51,6 @@ try:
     conf += local_settings
 except ImportError:
     logger.info("Local settings file not available.")
-
-try:
-    import imgstore.constants
-    CHUNK = getattr(load_config(imgstore.constants), "CHUNK", 0)
-    logger.info(f"Selected chunk={CHUNK}")
-
-except ModuleNotFoundError:
-    CHUNK=0
 
 
 class BaseIdTrackerAi(
@@ -444,11 +436,18 @@ class BaseIdTrackerAi(
 
         # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
         if self.video_object is None:
+            try:
+                chunk = int(self._session.value)
+            except:
+                chunk=conf.CHUNK
+                
+            
+            logger.info(f"Selected chunk {chunk}")
             logger.info("START: INIT VIDEO OBJECT")
             self.video_object = Video(
                 video_path=self.video_path,
                 open_multiple_files=self.open_multiple_files,
-                chunk=CHUNK
+                chunk=chunk
             )
             logger.info("FINISH: INIT VIDEO OBJECT")
         self.video_object.create_session_folder(self._session.value)
