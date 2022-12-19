@@ -49,7 +49,7 @@ def main():
          chunks = args.chunks
          
          
-    assert os.path.exists(arg.input)
+    assert os.path.exists(args.input)
 
 
     output = args.output
