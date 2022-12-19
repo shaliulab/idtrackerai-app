@@ -84,7 +84,7 @@ def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
     
     if frames:
-        list_of_blobs, success_rate = annotate_chunk_with_yolov7(store_path, chunk, frames, allowed_classes=allowed_classes, exclusive=False, save=True)
+        list_of_blobs, success_rate = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
     else:
         success_rate= "OK"
         list_of_blobs = None
