@@ -72,7 +72,7 @@ def main():
 
 def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
 
-    regex=os.path.join(input, "*_{chunk}-*.txt")
+    regex=os.path.join(input, f"*_{chunk}-*.txt")
     labels = sorted(glob.glob(regex))
     frames = [(
             int(os.path.basename(label).split("_")[0]),
