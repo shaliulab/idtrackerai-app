@@ -25,6 +25,7 @@ def get_parser():
     ap = argparse.ArgumentParser()
     ap.add_argument("--store-path", required=True)
     ap.add_argument("--n-jobs", type=int, default=1)
+    ap.add_argument("--input", required=True, help="Folder with labels produced by YOLOv7")
     ap.add_argument("--output", default=None, help="Output folder")
     ap.add_argument("--chunks", nargs="+", type=int, default=None)
     return ap
@@ -46,6 +47,9 @@ def main():
          chunks = store._index._chunks
     else:
          chunks = args.chunks
+         
+         
+    assert os.path.exists(arg.input)
 
 
     output = args.output
@@ -60,16 +64,15 @@ def main():
                 break
     
     output = joblib.Parallel(n_jobs=args.n_jobs)(joblib.delayed(process_chunk)(
-            args.store_path, chunk, allowed_classes=allowed_classes, output=output
+            args.store_path, chunk, args.input, allowed_classes=allowed_classes, output=output
         )
         for chunk in chunks
     )
 
 
-def process_chunk(store_path, chunk, allowed_classes=None, output=None):
+def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
 
-
-    regex=os.path.join(yolov7_repo, f"2022-12-02_16-02-37/all/labels/val/*_{chunk}-*.txt")
+    regex=os.path.join(input, "*_{chunk}-*.txt")
     labels = sorted(glob.glob(regex))
     frames = [(
             int(os.path.basename(label).split("_")[0]),
