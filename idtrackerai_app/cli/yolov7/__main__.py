@@ -82,12 +82,15 @@ def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
     ]
 
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
-
-    list_of_blobs, success_rate = annotate_chunk_with_yolov7(store_path, chunk, frames, allowed_classes=allowed_classes, exclusive=False, save=True)
+    
+    if frames:
+        list_of_blobs, success_rate = annotate_chunk_with_yolov7(store_path, chunk, frames, allowed_classes=allowed_classes, exclusive=False, save=True)
+    else:
+        success_rate= "OK"
 
     if output is not None:
         with open(os.path.join(output, f"{str(chunk).zfill(6)}_success.txt"), "w") as filehandle:
-            filehandle.write(f"{round(success_rate, 3)}\n")
+            filehandle.write(f"{success_rate}\n")
     
     return chunk, list_of_blobs, success_rate
 
