@@ -87,6 +87,7 @@ def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
         list_of_blobs, success_rate = annotate_chunk_with_yolov7(store_path, chunk, frames, allowed_classes=allowed_classes, exclusive=False, save=True)
     else:
         success_rate= "OK"
+        list_of_blobs = None
 
     if output is not None:
         with open(os.path.join(output, f"{str(chunk).zfill(6)}_success.txt"), "w") as filehandle:
