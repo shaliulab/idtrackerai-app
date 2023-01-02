@@ -439,7 +439,7 @@ class BaseIdTrackerAi(
             try:
                 chunk = int(self._session.value)
             except:
-                chunk=conf.CHUNK
+                chunk=getattr(conf, "CHUNK", 0)
                 
             
             logger.info(f"Selected chunk {chunk}")
