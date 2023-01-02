@@ -331,7 +331,7 @@ class BaseIdTrackerAi(
         finally:
             self.save()
             fragmentation_end=time.time()
-            logger.info(f"DONE tracking in {fragmentation_end - fragmentation_start} seconds")
+            logger.info(f"DONE crossings_detection_and_fragmentation in {fragmentation_end - fragmentation_start} seconds")
 
     def tracking(self):
         # Training and identification and post processing
