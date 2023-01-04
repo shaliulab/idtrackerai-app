@@ -39,6 +39,9 @@ setup(
         "console_scripts": [
             "idtrackerai=idtrackerai_app.__main__:start",
             "idtrackerai_cli=idtrackerai_app.cli.__main__:start",
+            "integrate-yolov7=idtrackerai_app.cli.yolov7.__main__:main",
+            "detect-incomplete-frames=idtrackerai_app.cli.yolov7.detect_incomplete_frames:main",
+            "save-frames=idtrackerai_app.cli.yolov7.save_frames:main",
         ],
     },
 )
