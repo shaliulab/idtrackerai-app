@@ -2,6 +2,7 @@ import numpy as np, os, logging
 import time
 import warnings
 from confapp import conf
+import sys
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
@@ -439,9 +440,9 @@ class BaseIdTrackerAi(
         if self.video_object is None:
             try:
                 chunk = int(self._session.value)
+                logger.info(f"Parsing chunk value from session: {chunk}")
             except:
                 chunk=getattr(conf, "CHUNK", 0)
-                
             
             logger.info(f"Selected chunk {chunk}")
             logger.info("START: INIT VIDEO OBJECT")
