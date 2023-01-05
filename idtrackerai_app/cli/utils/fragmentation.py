@@ -15,10 +15,14 @@ def main():
     args = ap.parse_args()
     chunk = args.chunk
     fragment_file = os.path.join(f"session_{str(chunk).zfill(6)}", "preprocessing", "fragments.npy")
+    video_file = os.path.join(f"session_{str(chunk).zfill(6)}", "video_object.npy")
     assert os.path.exists(fragment_file), f"{fragment_file} not found"
     list_of_fragments = np.load(fragment_file, allow_pickle=True).item()
+    #video_object = np.load(video_file, allow_pickle=True).item()
+    framerate = 160
     for fragment in list_of_fragments.fragments:
-        print(fragment.start_end)
+        length = fragment.start_end[1] - fragment.start_end[0]
+        print(fragment.start_end, length, length > framerate, fragment.identity)
 
 
 def load_list_of_blobs():
