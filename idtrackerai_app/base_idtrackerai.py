@@ -398,7 +398,8 @@ class BaseIdTrackerAi(
         try:
             fragments_path = self.select_preferred_path(self.video_object.fragments_path, preferred)
             self.list_of_fragments=ListOfFragments.load(fragments_path)
-        except:
+        except Exception as error:
+            logger.warning(error)
             self.list_of_fragments=None
 
         if not self.list_of_blobs.blobs_are_connected:
@@ -564,19 +565,27 @@ class BaseIdTrackerAi(
     def _step2_preprocessing(self):
         self._step2_preprocessing_segmentation()
         return self._step2_preprocessing_crossings_detection_and_fragmentation()
-
+    
+    
     def _step2_preprocessing_segmentation(self):
 
         logger.info("START: ANIMAL DETECTION")
         animals_detector = AnimalsDetectionAPI(self.video_object)
         self.list_of_blobs = animals_detector()
+        self.list_of_blobs.compute_overlapping_between_subsequent_frames()
         # Check segmentation consistency
-        segmentation_consistent = animals_detector.check_segmentation()
-        if not segmentation_consistent and self._chcksegm.value:
+        segmentation_consistent = animals_detector.check_segmentation(original=False)
+        
+        if segmentation_consistent["more"] and self._chcksegm.value:
             outfile_path = animals_detector.save_inconsistent_frames()
             self.save()  # saves video_object
             self.__output_segmentation_consistency_warning(outfile_path)
             return False  # This will make the tracking finish
+        
+
+        animals_detector.save_incomplete_frames()
+
+        
         self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
         

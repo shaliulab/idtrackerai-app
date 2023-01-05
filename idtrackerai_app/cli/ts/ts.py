@@ -58,8 +58,8 @@ def main():
     # to keep the reconnect_from_cache function from setting blobs_are_connected to True
     # when there is no cache! 
 
-    if command == "crossings_detection_and_fragmentation" and (reconnect_blobs_from_cache is None or reconnect_blobs_from_cache is True):
-        logger.warning(f"Detected reconnect_blobs_from_cache is set to {reconnect_blobs_from_cache}. This is forbidden for command crossings_detection_and_fragmentation, only False is allowed. I will set it to False")
+    if command == "preprocessing" and (reconnect_blobs_from_cache is None or reconnect_blobs_from_cache is True):
+        logger.warning(f"Detected reconnect_blobs_from_cache is set to {reconnect_blobs_from_cache}. This is forbidden for command {command}, only False is allowed. I will set it to False")
         reconnect_blobs_from_cache = False
 
     push_idtrackerai_job_to_ts(root_dir, store_path, chunk, command, reconnect_blobs_from_cache, skip_saving_identification_images, skip_every_frame=skip_every_frame, wait_for=wait_for, submit=submit)
