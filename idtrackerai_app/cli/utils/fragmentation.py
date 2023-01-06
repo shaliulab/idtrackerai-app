@@ -33,13 +33,14 @@ def show_fragment_structure(chunk, seconds):
     assert os.path.exists(store_md), f"Path to metadata.yaml ({store_md}) not found"
     metadata = _extract_store_metadata(store_md)
     framerate = metadata["framerate"]
+    structure = []
 
     for fragment in list_of_fragments.fragments:
         length = fragment.start_end[1] - fragment.start_end[0]
         followed = fragment.start_end[1] !=  video_object.episodes_start_end[-1][-1]
         
-        structure = (fragment.start_end, length, length > (framerate * seconds), fragment.identity, followed)
-        for field in structure:
+        structure.append((fragment.start_end, length, length > (framerate * seconds), fragment.identity, followed))
+        for field in structure[-1]:
             print(field, end=" ")
         print("")
 

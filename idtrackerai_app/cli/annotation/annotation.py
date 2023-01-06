@@ -8,15 +8,17 @@ import cv2
 import numpy as np
 import joblib
 
-from idtrackerai_app.cli.utils.fragmentation import main as show_fragment_structure
+from idtrackerai_app.cli.utils.fragmentation import show_fragment_structure
 from idtrackerai.utils.py_utils import get_spaced_colors_util
 from idtrackerai.list_of_blobs import ListOfBlobs
 from imgstore.interface import VideoCapture
 
+folder = "../video-annotator/frames"
+
 def get_parser():
     
     ap = argparse.ArgumentParser()
-    ap.add_argument("--store_path", required=True, help="Path to metadata.yaml")
+    ap.add_argument("--store-path", required=True, help="Path to metadata.yaml")
     ap.add_argument("--chunks", type=int, nargs="+", required=True)
     return ap
 
@@ -28,7 +30,7 @@ def main():
     chunks = args.chunks
     store_path = args.store_path
     
-    joblib.Parallel(n_jobs=1)(
+    joblib.Parallel(n_jobs=-2)(
         joblib.delayed(process_chunk)(store_path, chunk)
         for chunk in chunks
     )
@@ -37,7 +39,7 @@ def main():
 def draw_frame(frame, blobs_in_frame, **kwargs):
     
     for blob in blobs_in_frame:
-        frame = blob.draw(frame, **kwargs)
+        blob.draw(frame, **kwargs)
 
     return frame
 
@@ -61,19 +63,28 @@ def process_chunk(store_path, chunk):
     colors_lst = get_spaced_colors_util(6)
     
     structure = show_fragment_structure(chunk, 1)
-    for start_end, length, significant, followed in structure:
+
+    for start_end, length, significant, identity, followed in structure:
         if followed:
-            start = int(start_end[1] - 0.5*fps)
-            end = int(start_end[1] + 0.5*fps)
+            start = int(start_end[1] - 5)
+            end = int(start_end[1] + 5)
             frame_number = start
             store.set(1, frame_number)
             while frame_number < end:
+                frame_idx=frame_number - first_frame_of_chunk
+                filename = os.path.join(folder, f"{frame_number}_{chunk}-{frame_idx}.png")
+                if os.path.exists(filename):
+                    frame_number+=1
+                    continue
+
                 ret, frame = store.read()
                 if not ret:
                     break
-                frame_idx=frame_number - first_frame_of_chunk
+
+
+                frame = cv2.cvtColor(frame, cv2.COLOR_GRAY2BGR)
                 frame = draw_frame(frame, list_of_blobs.blobs_in_video[frame_number], colors_lst=colors_lst)
-                filename = os.path.join("../video_annotator", f"{frame_number}_{chunk}-{frame_idx}.png")
+                os.makedirs(folder, exist_ok=True)
 
                 cv2.imwrite(filename, frame)
                 frame_number += 1
