@@ -438,11 +438,9 @@ class BaseIdTrackerAi(
 
         # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
         if self.video_object is None:
-            try:
-                chunk = int(self._session.value)
-                logger.info(f"Parsing chunk value from session: {chunk}")
-            except:
-                chunk=getattr(conf, "CHUNK", 0)
+            
+            chunk = int(self._session.value)
+            logger.info(f"Parsing chunk value from session: {chunk}")
             
             logger.info(f"Selected chunk {chunk}")
             logger.info("START: INIT VIDEO OBJECT")
