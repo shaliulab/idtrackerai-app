@@ -42,6 +42,10 @@ setup(
             "integrate-yolov7=idtrackerai_app.cli.yolov7.__main__:main",
             "detect-incomplete-frames=idtrackerai_app.cli.yolov7.detect_incomplete_frames:main",
             "save-frames=idtrackerai_app.cli.yolov7.save_frames:main",
+            "show-fragment-structure=idtrackerai_app.cli.utils.fragmentation:main",
+            "load-blobs=idtrackerai_app.cli.utils.fragmentation:load_list_of_blobs",
+            "load-video=idtrackerai_app.cli.loaders:main",
+            "annotate-scenes=idtrackerai_app.cli.annotation:main",
         ],
     },
 )
