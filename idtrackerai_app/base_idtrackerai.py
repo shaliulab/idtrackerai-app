@@ -46,6 +46,8 @@ from idtrackerai.list_of_global_fragments import (
     create_list_of_global_fragments
 )
 
+from idtrackerai_app.cli.yolov7 import integrate_yolov7
+
 logger = logging.getLogger(__name__)
 try:
     import local_settings # type: ignore
@@ -277,6 +279,16 @@ class BaseIdTrackerAi(
         self._video.enabled = True
         self._session.enabled = True
         self.set_controls_enabled(True)
+
+    def integration(self):
+
+        integrate_yolov7(
+            store_path=os.path.realpath(self.video_path),
+            n_jobs=conf.NUMBER_OF_JOBS_FOR_INTEGRATION,
+            chunks=[int(self._session.value)],
+            input="./imperfect/yolov7/labels",
+            output="./imperfect/integration",
+         )
 
 
     def preprocessing(self):
