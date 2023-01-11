@@ -26,51 +26,48 @@ def get_parser():
     ap.add_argument("--store-path", required=True)
     ap.add_argument("--n-jobs", type=int, default=1)
     ap.add_argument("--input", required=True, help="Folder with labels produced by YOLOv7")
-    ap.add_argument("--output", default=None, help="Output folder")
+    ap.add_argument("--output", default="idtrackerai", help="Output folder")
     ap.add_argument("--chunks", nargs="+", type=int, default=None)
     return ap
 
 
 def main():
+
+    ap = get_parser()
+    args = ap.parse_args()
+    integrate_yolov7(store_path=args.store_path, n_jobs=n_jobs, input=input, output=args.output, chunks=args.chunks)
+
+
+def integrate_yolov7(store_path, n_jobs, input, output, chunks):
     """
     Assumes all problematic frames have a label in the yolov7 repo
     """
 
-    ap = get_parser()
-    args = ap.parse_args()
+    assert os.path.exists(input), f"{input} not found (wd: {os.getcwd()}"
+    assert os.path.exists(output), f"{output} not found"
+    assert os.path.isdir(output), f"{output} is not a directory"
+
+    filename = f"session_{str(chunk).zfill(6)}_integration_output.txt"
+    logfile = os.path.join(output, filename)
+    assert os.path.exists(logfile), f"{logfile} does not exist, did you run the YOLOv7 integration step already?"
 
     allowed_classes={0: "fly"}
+    store = validate_store(store_path)
 
-    store = validate_store(args.store_path)
-
-    if args.chunks is None:
-         chunks = store._index._chunks
-    else:
-         chunks = args.chunks
-         
-         
-    assert os.path.exists(args.input)
-
-
-    output = args.output
     count = 0
-    if output is not None:
-        while True:
-            if os.path.exists(output):
-                count+=1
-                output = args.output + str(count)
-            else:
-                os.makedirs(output) 
-                break
-    
-    output = joblib.Parallel(n_jobs=args.n_jobs)(joblib.delayed(process_chunk)(
-            args.store_path, chunk, args.input, allowed_classes=allowed_classes, output=output
+    original_output = output
+
+
+
+   
+    Output = joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(process_chunk)(
+            store_path, chunk, input, allowed_classes=allowed_classes, logfile=logfile
         )
         for chunk in chunks
     )
 
 
-def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
+def process_chunk(store_path, chunk, input, allowed_classes=None, logfile=None):
 
     regex=os.path.join(input, f"*_{chunk}-*.txt")
     labels = sorted(glob.glob(regex))
@@ -82,6 +79,7 @@ def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
     ]
 
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
+ou
     
     if frames:
         _, processed_successfully, failed_frames = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
@@ -92,13 +90,13 @@ def process_chunk(store_path, chunk, input, allowed_classes=None, output=None):
         processed_successfully=0
         failed_frames = []
 
-    if output is not None:
-        with open(os.path.join(output, f"{str(chunk).zfill(6)}_success.txt"), "w") as filehandle:
-            filehandle.write(f"Processed/Total,Ratio\n")
-            filehandle.write(f"{processed_successfully}/{len(frames)},{success_rate}\n")
-        with open(os.path.join(output, f"{str(chunk).zfill(6)}_failure.txt"), "w") as filehandle:
+    if logfile is not None:
+        with open(logfile, "a") as filehandle:
+            filehandle.write(f"Processed frames: {processed_successfully}\n")
+            filehandle.write(f"Total frames: {len(frames)}\n")
+            filehandle.write(f"Success rate: {success_rate}\n")
             for frame_number in failed_frames:
-                filehandle.write(f"{frame_number}\n")
+                filehandle.write(f"Fail: {frame_number}\n")
 
     return chunk, success_rate
 
