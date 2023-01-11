@@ -29,8 +29,13 @@ def main():
     
     chunks = args.chunks
     store_path = args.store_path
+
+    if len(chunks) == 1:
+        n_jobs=1
+    else:
+        n_jobs=-2
     
-    joblib.Parallel(n_jobs=-2)(
+    joblib.Parallel(n_jobs=n_jobs)(
         joblib.delayed(process_chunk)(store_path, chunk)
         for chunk in chunks
     )
@@ -74,6 +79,7 @@ def process_chunk(store_path, chunk):
                 frame_idx=frame_number - first_frame_of_chunk
                 filename = os.path.join(folder, f"{frame_number}_{chunk}-{frame_idx}.png")
                 if os.path.exists(filename):
+                    store.read()
                     frame_number+=1
                     continue
 
