@@ -15,7 +15,7 @@ def get_parser():
 def main():
     ap = get_parser()
     args = ap.parse_args()
-    chunk = args.chunks
+    chunk = args.chunk
     seconds = args.seconds
     
     show_fragment_structure(chunk, seconds)
