@@ -46,6 +46,7 @@ setup(
             "load-blobs=idtrackerai_app.cli.utils.fragmentation:load_list_of_blobs",
             "load-video=idtrackerai_app.cli.loaders:main",
             "annotate-scenes=idtrackerai_app.cli.annotation:main",
+            "load2fiftyone=idtrackerai_app.cli.yolov7.load2fiftyone:main",
         ],
     },
 )
