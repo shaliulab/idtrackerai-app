@@ -79,7 +79,6 @@ def process_chunk(store_path, chunk, input, allowed_classes=None, logfile=None):
     ]
 
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
-
     
     if frames:
         _, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
