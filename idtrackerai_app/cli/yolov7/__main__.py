@@ -79,10 +79,12 @@ def process_chunk(store_path, chunk, input, allowed_classes=None, logfile=None):
     ]
 
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
-ou
+
     
     if frames:
-        _, processed_successfully, failed_frames = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
+        _, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
+        processed_successfully = len(successful_frames)
+
         success_rate=round(processed_successfully/len(frames), 3)
         
     else:
@@ -95,8 +97,10 @@ ou
             filehandle.write(f"Processed frames: {processed_successfully}\n")
             filehandle.write(f"Total frames: {len(frames)}\n")
             filehandle.write(f"Success rate: {success_rate}\n")
+            for frame_number in successful_frames:
+                filehandle.write(f"Success integration: {frame_number}\n")
             for frame_number in failed_frames:
-                filehandle.write(f"Fail: {frame_number}\n")
+                filehandle.write(f"Fail integration: {frame_number}\n")
 
     return chunk, success_rate
 
