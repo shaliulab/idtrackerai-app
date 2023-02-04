@@ -285,7 +285,7 @@ class BaseIdTrackerAi(
             n_jobs=conf.NUMBER_OF_JOBS_FOR_INTEGRATION,
             chunks=[int(self._session.value)],
             input=conf.AI_LABELS_FOLDER,
-            output="idtrackerai",
+            output=".",
          )
 
 
