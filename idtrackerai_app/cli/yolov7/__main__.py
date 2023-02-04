@@ -119,6 +119,7 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
         success_rate= "OK"
         processed_successfully=0
         failed_frames = []
+        successful_frames=[]
 
     if logfile is not None:
         with open(logfile, "a") as filehandle:
