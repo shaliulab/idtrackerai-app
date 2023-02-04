@@ -108,11 +108,10 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
     ]
 
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
-    
+
     if frames:
         _, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
         processed_successfully = len(successful_frames)
-
         success_rate=round(processed_successfully/len(frames), 3)
         
     else:
@@ -129,7 +128,7 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
 
     pkl_file = os.path.join(basedir, "idtrackerai", f"session_{str(chunk).zfill(6)}", "preprocessing", "ai.pkl")
     with open(pkl_file, "wb") as filehandle:
-        pickle.dump({"success": successful_frames, "fail": failed_frames}, pkl_file)
+        pickle.dump({"success": successful_frames, "fail": failed_frames}, filehandle)
     
     return chunk, success_rate
 
