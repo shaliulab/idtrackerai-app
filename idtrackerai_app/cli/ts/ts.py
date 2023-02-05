@@ -12,6 +12,7 @@ from idtrackerai.constants import ANALYSIS_FOLDER
 from .utils import write_shell_script, ts_sub
 
 TS_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ts.json")
+COMMANDS=["preprocessing", "integration", "tracking", "track_video", "crossings_detection_and_fragmentation"]
 
 assert os.path.exists(TS_JSON)
 logger = logging.getLogger(__name__)
@@ -36,7 +37,7 @@ def main():
     ap = get_parser()
     args = ap.parse_args()
     if args.command is not None:
-        if not args.command in ["preprocessing", "tracking", "track_video", "crossings_detection_and_fragmentation"]:
+        if not args.command in COMMANDS:
             raise Exception("Invalid")
         
         
@@ -209,11 +210,13 @@ def make_session_script(
 ):
 
     chunk_pad = str(chunk).zfill(6)
+    folder = "."
+
     session_script = os.path.join(
-        ".", f"session_{chunk_pad}", f"session_{chunk_pad}_{command}.sh"
+        folder, f"session_{chunk_pad}", f"session_{chunk_pad}_{command}.sh"
     )
     output_file = os.path.join(
-        f"session_{chunk_pad}", f"session_{chunk_pad}_{command}_output.txt"
+        folder, f"session_{chunk_pad}", f"session_{chunk_pad}_{command}_output.txt"
     )
 
     cmd = f"idtrackerai terminal_mode --_session {chunk_pad}  --load  {config_file} --exec {command}"

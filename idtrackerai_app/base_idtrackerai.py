@@ -35,10 +35,6 @@ from idtrackerai.crossings_detection import CrossingsDetectionAPI
 from idtrackerai.fragmentation import FragmentationAPI
 from idtrackerai.tracker.tracker import TrackerAPI
 
-from .gui.roi_selection import ROISelectionWin
-from .gui.setup_points_selection import SetupInfoWin
-from .gui.player_win_interactions import PlayerWinInteractions
-
 from idtrackerai.list_of_blobs import ListOfBlobs
 from idtrackerai.list_of_fragments import ListOfFragments
 from idtrackerai.list_of_global_fragments import (
@@ -46,6 +42,9 @@ from idtrackerai.list_of_global_fragments import (
     create_list_of_global_fragments
 )
 
+from idtrackerai_app.gui.roi_selection import ROISelectionWin
+from idtrackerai_app.gui.setup_points_selection import SetupInfoWin
+from idtrackerai_app.gui.player_win_interactions import PlayerWinInteractions
 from idtrackerai_app.cli.yolov7 import integrate_yolov7
 
 logger = logging.getLogger(__name__)
@@ -54,7 +53,6 @@ try:
     conf += local_settings
 except ImportError:
     logger.info("Local settings file not available.")
-
 
 class BaseIdTrackerAi(
     BaseWidget, PlayerWinInteractions, ROISelectionWin, SetupInfoWin
@@ -286,8 +284,8 @@ class BaseIdTrackerAi(
             store_path=os.path.realpath(self.video_path),
             n_jobs=conf.NUMBER_OF_JOBS_FOR_INTEGRATION,
             chunks=[int(self._session.value)],
-            input="./imperfect/yolov7/labels",
-            output="./imperfect/integration",
+            input=conf.AI_LABELS_FOLDER,
+            output=".",
          )
 
 
@@ -594,7 +592,19 @@ class BaseIdTrackerAi(
             return False  # This will make the tracking finish
         
 
-        animals_detector.save_incomplete_frames()
+        animals_detector.remove_frames(conf.IMPERFECT_FRAMES_FOLDER, self.video_object._chunk)
+        animals_detector.save_incomplete_frames(conf.IMPERFECT_FRAMES_FOLDER)
+
+        for frame_number in self.video_object.frames_with_more_blobs_than_animals:
+            print(f"PROBLEM:Too many blobs:{frame_number}")
+
+        for frame_number in self.video_object.frames_with_less_blobs_than_animals:
+            print(f"PROBLEM:Too few blobs:{frame_number}")
+
+        for frame_number in self.video_object.frames_with_imperfect_overlap:
+            print(f"PROBLEM:Imperfect overlap:{frame_number}")
+
+
 
         
         self._progress.value = 1
