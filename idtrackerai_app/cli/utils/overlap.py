@@ -42,7 +42,7 @@ def process_chunk(store_path, chunk):
         for ((fn, i), (fnp1, j)) in overlap_pattern:
             blob_before=frame_before[i]
             blob_after=frame_after[j]
-            pattern.append((chunk, blob_before.in_frame_index, blob_after.in_frame_index))
+            pattern.append((chunk, blob_before.in_frame_index, blob_after.in_frame_index, blob_before.identity, blob_after.identity))
         
     else:
         print(f"Cannot compute overlap between chunks {chunk} and {chunk+1} for experiment {store_path}")
@@ -72,8 +72,28 @@ def process_all_chunks(store_path, chunks, n_jobs=1):
 
     records=itertools.chain(*overlap_pattern)
     data=pd.DataFrame.from_records(records)
-    data.columns=["chunk", "in_frame_index_before", "in_frame_index_after"]
-    
+    data.columns=["chunk", "in_frame_index_before", "in_frame_index_after", "local_identity", "local_identity_after"]
+
+    data=data.loc[~np.isnan(data["local_identity"])]
+
+    data["identity"]=0
+
+    for chunk in data["chunk"]:
+        current_chunk=data.loc[data["chunk"] == chunk]
+        if chunk == 50:
+            data[current_chunk.index, "identity"]=data[current_chunk.index, "local_identity"]
+        
+        else:
+            for local_identity in current_chunk["local_identity"]:
+                identity=data.loc[(data["chunk"] == chunk-1) & (data["local_identity_after"] == local_identity)]["identity"]
+
+                data[
+                    data.loc[(data["chunk"] == chunk) & (data["local_identity"] == local_identity)].index,
+                    "identity"
+                ] = identity
+
+
+
     basedir = os.path.dirname(store_path)
     csv_file=os.path.join(basedir, "idtrackerai", "concatenation-overlap.csv")
     data.to_csv(csv_file)
