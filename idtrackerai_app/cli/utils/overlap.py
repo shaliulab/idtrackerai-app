@@ -1,10 +1,12 @@
 import argparse
 import os.path
 import itertools
+import warnings
 
 import numpy as np
 import pandas as pd
 import joblib
+from tqdm.auto import tqdm
 
 from idtrackerai.list_of_blobs.overlap import compute_overlapping_between_two_subsequent_frames
 from idtrackerai.list_of_blobs import ListOfBlobs
@@ -12,7 +14,7 @@ from idtrackerai.list_of_blobs import ListOfBlobs
 def get_parser():
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--store-path", type=str, help="path to metadata.yaml")
+    ap.add_argument("--store-path", type=str, help="path to metaidentity_table.yaml")
     ap.add_argument("--chunks", type=int, nargs="+")
     ap.add_argument("--n-jobs", type=int, default=1)
     return ap
@@ -38,7 +40,9 @@ def process_chunk(store_path, chunk):
         frame_after=list_of_blobs_next.blobs_in_video[frame_number]
 
         overlap_pattern=compute_overlapping_between_two_subsequent_frames(frame_before, frame_after, queue=None, do=False)
-        print(overlap_pattern)
+
+        #print(overlap_pattern)
+
         for ((fn, i), (fnp1, j)) in overlap_pattern:
             blob_before=frame_before[i]
             blob_after=frame_after[j]
@@ -62,8 +66,12 @@ def main():
     process_all_chunks(args.store_path, chunks, n_jobs=args.n_jobs)
 
 
-def process_all_chunks(store_path, chunks, n_jobs=1):
+def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50):
     
+    basedir = os.path.dirname(store_path)
+    csv_file=os.path.join(basedir, "idtrackerai", "concatenation-overlap.csv")
+
+
     overlap_pattern = joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(process_chunk)(
         store_path, chunk 
     )
@@ -71,29 +79,77 @@ def process_all_chunks(store_path, chunks, n_jobs=1):
     )
 
     records=itertools.chain(*overlap_pattern)
-    data=pd.DataFrame.from_records(records)
-    data.columns=["chunk", "in_frame_index_before", "in_frame_index_after", "local_identity", "local_identity_after"]
+    identity_table=pd.DataFrame.from_records(records)
+    identity_table.columns=["chunk", "in_frame_index_before", "in_frame_index_after", "local_identity", "local_identity_after"]
+    identity_table.to_csv(csv_file)
+    identity_table=identity_table.loc[pd.notna(identity_table["local_identity"])]
+    identity_table["identity"]=0
+    chunks=sorted(list(set(identity_table["chunk"].values.tolist())))
+    identity_table = propagate_identities(identity_table, chunks, ref_chunk=ref_chunk)
+    identity_table.to_csv(csv_file)
 
-    data=data.loc[~np.isnan(data["local_identity"])]
 
-    data["identity"]=0
+def propagate_identities(identity_table, chunks, ref_chunk=50):
+    """
+    Propagate the identity of the blobs in the reference chunk
+    to the overlapping blobs in future chunks of the recording
 
-    for chunk in data["chunk"]:
-        current_chunk=data.loc[data["chunk"] == chunk]
-        if chunk == 50:
-            data[current_chunk.index, "identity"]=data[current_chunk.index, "local_identity"]
+    This ensures identity is consistent not only within chunk, but also across chunks
+    This step is required because idtrackerai analyzes the chunks independently,
+    and so the identities are not guaranteed to be consistent across chunks 
+
+    We follow a recursive programming solution, where we move through the chunks
+    always looking at the identity assignments in the previous chunk.
+    We start at the reference chunk i.e. the ref_chunk identities will be propagated through the dataset
+
+    If a chunk-specific identity of 0 (local_identity) is detected, it is ignored
+
+    Args:
+        identity_table (pd.DataFrame): Table with columns chunk, local_identity and local_identity_after
+            chunk is an integer marking the "left" or "before" chunk being concatenated
+            local_identity is a column with integers marking the identity of each blob in the "left" chunk
+            local_identity_after is a column with integers marking the identity of each blob in the "right" or "after" chunk
+
+            There should be a one-to-one match both ways but this is not checked but the function
+
+        chunks (list): Chunks to propagate the identities through. All chunks because the ref_chunk are ignored
+        ref_chunk (int): Chunk to use as reference
+        
+    Returns:
+        identity_table (pd.DataFrame): Same table as before with new column "identity" which contains a consistent identity across chunks
+    """
+    if ref_chunk not in chunks:
+        ref_chunk=chunks[0]
+
+    ignored_chunks = chunks[:chunks.index(ref_chunk)]
+
+    if len(ignored_chunks) != 0:
+        warnings.warn(f"Ignoring chunks {ignored_chunks}")
+
+    chunks = chunks[chunks.index(ref_chunk):]
+
+    for chunk in tqdm(chunks, desc="Propagating identities", unit="chunk"):
+        current_chunk=identity_table.loc[identity_table["chunk"] == chunk]
+        if chunk == ref_chunk:
+            identity_table.loc[current_chunk.index, "identity"]=identity_table.loc[current_chunk.index, "local_identity"]
         
         else:
             for local_identity in current_chunk["local_identity"]:
-                identity=data.loc[(data["chunk"] == chunk-1) & (data["local_identity_after"] == local_identity)]["identity"]
+                if local_identity == 0:
+                    warnings.warn(f"Missing identification in chunk {chunk}")
+                    continue
+                # get the identity of the blob in the previous chunk that overlapped with a blob in this chunk with the current identity
+                # i.e. the current blob
+                identity=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "identity"]
+                try:
+                    identity=identity.item()
+                except Exception as error:
+                    print(error)
+                    print(identity)
+                    import ipdb; ipdb.set_trace()
 
-                data[
-                    data.loc[(data["chunk"] == chunk) & (data["local_identity"] == local_identity)].index,
-                    "identity"
-                ] = identity
+                # assign to the current blob that identity
+                identity_table.loc[identity_table.loc[(identity_table["chunk"] == chunk) & (identity_table["local_identity"] == local_identity)].index, "identity"] = identity
 
 
-
-    basedir = os.path.dirname(store_path)
-    csv_file=os.path.join(basedir, "idtrackerai", "concatenation-overlap.csv")
-    data.to_csv(csv_file)
+    return identity_table
