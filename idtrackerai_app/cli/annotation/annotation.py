@@ -20,17 +20,17 @@ from imgstore.interface import VideoCapture
 FOLDER = "video-annotator/frames"
 
 def get_parser():
-    
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--store-path", required=True, help="Path to metadata.yaml")
     ap.add_argument("--chunks", type=int, nargs="+", required=True)
     return ap
 
 def main():
-    
+
     ap = get_parser()
     args = ap.parse_args()
-    
+
     chunks = args.chunks
     store_path = args.store_path
 
@@ -38,19 +38,18 @@ def main():
         n_jobs=1
     else:
         n_jobs=-2
-    
 
     joblib.Parallel(n_jobs=n_jobs)(
         joblib.delayed(process_chunk)(store_path, chunk)
         for chunk in chunks
     )
-    
-    
+
+
 def draw_frame(frame, blobs_in_frame, **kwargs):
     """
     Annotate the idtrackerai information onto the frame
     """
-    
+
     for blob in blobs_in_frame:
         blob.draw(frame, **kwargs)
 
@@ -67,20 +66,20 @@ def process_chunk(store_path, chunk, min_duration=1, **kwargs):
 
     Args:
 
-        store_path (str): Path to the imgstore recording with a 
+        store_path (str): Path to the imgstore recording with a
         chunk (int): Specific chunk of the imgstore recording being processed
-    
+
     """
-    
+
     output_folder = os.path.join(os.path.dirname(os.path.realpath(store_path)), FOLDER)
 
     store = VideoCapture(store_path, chunk)
     number_of_animals = int(re.search("FlyHostel[0-9]/([0-9])*X/", store_path).group(1))
     colors_lst = get_spaced_colors_util(number_of_animals)
-    
+
     basedir = os.path.dirname(store_path)
     session_folder = os.path.join(basedir, "idtrackerai", f"session_{str(chunk).zfill(6)}")
-    
+
     blobs_collection = os.path.join(session_folder, "preprocessing", "blobs_collection.npy")
     if not os.path.exists(blobs_collection):
         raise Exception(f{"blobs_collection} does not exist. Please make sure idtrackerai_preprocessing has been run")
@@ -90,8 +89,8 @@ def process_chunk(store_path, chunk, min_duration=1, **kwargs):
     video_file = os.path.join(session_folder, "video_object.npy")
     video_object = np.load(video_file, allow_pickle=True).item()
     first_frame_of_chunk = video_object.episodes_start_end[0][0]
-    
-    structure = show_fragment_structure(chunk, min_duration=min_duration) 
+
+    structure = show_fragment_structure(chunk, min_duration=min_duration)
     os.makedirs(output_folder, exist_ok=True)
 
     for start_end, length, significant, identity, followed in structure:
@@ -102,7 +101,7 @@ def process_chunk(store_path, chunk, min_duration=1, **kwargs):
 def save_scene(store, annotation, scene_center, window_length, first_frame_number, colors_lst, output_folder):
     """
     Save the annotated frames produced by the idtracker AI in complex scene for human validation
-     
+
     Args:
 
         store (imgstore.stores.VideoStore)
