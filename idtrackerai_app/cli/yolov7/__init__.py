@@ -1,1 +1,1 @@
-from .__main__ import integrate_yolov7
+from .__main__ import integrate_yolov7, process_chunk

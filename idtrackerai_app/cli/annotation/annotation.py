@@ -72,7 +72,7 @@ def process_chunk(store_path, chunk, min_duration=1, **kwargs):
     
     """
     
-    output_folder = os.path.join(os.path.dirname(store_path), FOLDER)
+    output_folder = os.path.join(os.path.dirname(os.path.realpath(store_path)), FOLDER)
 
     store = VideoCapture(store_path, chunk)
     number_of_animals = int(re.search("FlyHostel[0-9]/([0-9])*X/", store_path).group(1))

@@ -2,7 +2,7 @@ import argparse
 import os.path
 import itertools
 import warnings
-
+import re
 import numpy as np
 import pandas as pd
 import joblib
@@ -22,6 +22,9 @@ def get_parser():
 
 def process_chunk(store_path, chunk):
 
+    if chunk % 10 == 0:
+        print(f"Processing chunk {chunk}")
+
     video_object_path = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk).zfill(6)}", "video_object.npy")
     list_of_blobs_path = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk).zfill(6)}", "preprocessing", "blobs_collection.npy")
     list_of_blobs_path_next = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk+1).zfill(6)}", "preprocessing", "blobs_collection.npy")
@@ -31,7 +34,7 @@ def process_chunk(store_path, chunk):
     if os.path.exists(list_of_blobs_path) and os.path.exists(list_of_blobs_path_next):
         video=np.load(video_object_path, allow_pickle=True).item()
         frame_number = video.episodes_start_end[-1][-1]
-    
+
 
         list_of_blobs=ListOfBlobs.load(list_of_blobs_path)
         list_of_blobs_next=ListOfBlobs.load(list_of_blobs_path_next)
@@ -41,13 +44,22 @@ def process_chunk(store_path, chunk):
 
         overlap_pattern=compute_overlapping_between_two_subsequent_frames(frame_before, frame_after, queue=None, do=False)
 
-        #print(overlap_pattern)
-
         for ((fn, i), (fnp1, j)) in overlap_pattern:
             blob_before=frame_before[i]
             blob_after=frame_after[j]
-            pattern.append((chunk, blob_before.in_frame_index, blob_after.in_frame_index, blob_before.identity, blob_after.identity))
-        
+            identity_before=blob_before.identity
+            if identity_before is None:
+                identity_before=0
+            identity_after=blob_after.identity
+            if identity_after is None:
+                identity_after=0
+
+            pattern.append((
+                chunk,
+                blob_before.in_frame_index, blob_after.in_frame_index,
+                identity_before, identity_after
+            ))
+
     else:
         print(f"Cannot compute overlap between chunks {chunk} and {chunk+1} for experiment {store_path}")
     return pattern
@@ -67,13 +79,14 @@ def main():
 
 
 def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50):
-    
+
     basedir = os.path.dirname(store_path)
+    temp_csv_file=os.path.join(basedir, "idtrackerai", "temp_concatenation-overlap.csv")
     csv_file=os.path.join(basedir, "idtrackerai", "concatenation-overlap.csv")
 
 
     overlap_pattern = joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(process_chunk)(
-        store_path, chunk 
+        store_path, chunk
     )
         for chunk in chunks
     )
@@ -81,22 +94,32 @@ def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50):
     records=itertools.chain(*overlap_pattern)
     identity_table=pd.DataFrame.from_records(records)
     identity_table.columns=["chunk", "in_frame_index_before", "in_frame_index_after", "local_identity", "local_identity_after"]
-    identity_table.to_csv(csv_file)
+    identity_table.to_csv(temp_csv_file)
+    number_of_animals=int(re.search("FlyHostel[0-9]/([0-9]*)X/", store_path).group(1))
+
+
     identity_table=identity_table.loc[pd.notna(identity_table["local_identity"])]
+    assert identity_table.shape[0] > 0, f"Corruped identity table (see {temp_csv_file})"
     identity_table["identity"]=0
+
     chunks=sorted(list(set(identity_table["chunk"].values.tolist())))
-    identity_table = propagate_identities(identity_table, chunks, ref_chunk=ref_chunk)
+    identity_table = propagate_identities(
+        identity_table,
+        chunks,
+        ref_chunk=ref_chunk,
+        number_of_animals=number_of_animals
+    )
     identity_table.to_csv(csv_file)
 
 
-def propagate_identities(identity_table, chunks, ref_chunk=50):
+def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals=None):
     """
     Propagate the identity of the blobs in the reference chunk
     to the overlapping blobs in future chunks of the recording
 
     This ensures identity is consistent not only within chunk, but also across chunks
     This step is required because idtrackerai analyzes the chunks independently,
-    and so the identities are not guaranteed to be consistent across chunks 
+    and so the identities are not guaranteed to be consistent across chunks
 
     We follow a recursive programming solution, where we move through the chunks
     always looking at the identity assignments in the previous chunk.
@@ -114,7 +137,10 @@ def propagate_identities(identity_table, chunks, ref_chunk=50):
 
         chunks (list): Chunks to propagate the identities through. All chunks because the ref_chunk are ignored
         ref_chunk (int): Chunk to use as reference
-        
+        number_of_animals (int): Optional, if passed and different from 1,
+           the function emits a warning when an animal with an assigned identity of 0
+           is detected (which means it does not have a cross-chunk identity)
+
     Returns:
         identity_table (pd.DataFrame): Same table as before with new column "identity" which contains a consistent identity across chunks
     """
@@ -132,21 +158,26 @@ def propagate_identities(identity_table, chunks, ref_chunk=50):
         current_chunk=identity_table.loc[identity_table["chunk"] == chunk]
         if chunk == ref_chunk:
             identity_table.loc[current_chunk.index, "identity"]=identity_table.loc[current_chunk.index, "local_identity"]
-        
+
         else:
             for local_identity in current_chunk["local_identity"]:
                 if local_identity == 0:
-                    warnings.warn(f"Missing identification in chunk {chunk}")
+                    if number_of_animals > 1:
+                        warnings.warn(f"Missing identification in chunk {chunk}")
+                    # whatever the number of animals,
+                    # the temporary identity in the data frame (0)
+                    # is left unchanged
+                    # to represent that a cross-chunk identity cannot be assigned
+                    # to this local identity in this chunk
                     continue
                 # get the identity of the blob in the previous chunk that overlapped with a blob in this chunk with the current identity
                 # i.e. the current blob
                 identity=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "identity"]
-                try:
+                if len(identity) == 0:
+                    identity = 0
+                else:
                     identity=identity.item()
-                except Exception as error:
-                    print(error)
-                    print(identity)
-                    import ipdb; ipdb.set_trace()
+
 
                 # assign to the current blob that identity
                 identity_table.loc[identity_table.loc[(identity_table["chunk"] == chunk) & (identity_table["local_identity"] == local_identity)].index, "identity"] = identity

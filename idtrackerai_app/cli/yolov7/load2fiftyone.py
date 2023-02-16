@@ -14,7 +14,7 @@ FIFTYONE_DATASETS="/Users/FlySleepLab_Dropbox/Data/flyhostel_data/fiftyone"
 
 def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_id=None, count=None, n_jobs=1):
 
-    
+
     if labels_folder.startswith("http://"):
         # label_files = list_files(labels_folder, "*")
         index = tempfile.mktemp(prefix="load2fiftyone", suffix=".txt")
@@ -29,8 +29,8 @@ def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_i
                 file = os.path.join(labels_folder, fname)
                 label_files.append(file)
 
-    else:        
-        assert os.path.exists(labels_folder), f"{labels_folder} not found"    
+    else:
+        assert os.path.exists(labels_folder), f"{labels_folder} not found"
         label_files = sorted(glob.glob(os.path.join(labels_folder, "*")))
         label_files = [file for file in label_files if os.path.basename(file) != "index.txt"]
 
@@ -63,8 +63,8 @@ def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_i
             sample.tags.append(experiment)
             dataset.add_sample(sample)
             dataset.save()
-            
-            
+
+
     class_names={i: dataset.default_classes[i] for i in range(len(dataset.default_classes))}
     detections = load_detections(label_files, class_id=class_id, count=count, false_action=add_to_dataset, true_action=None, n_jobs=n_jobs, class_names=class_names)
     return detections
@@ -74,17 +74,11 @@ def detections2fiftyone(detections):
 
     fiftyone_detections=[]
     for detection in detections:
-        # bbox = list(detection["bounding_box"])
-        # bbox[0] = bbox[0] - bbox[2] / 2
-        # bbox[1] = bbox[1] - bbox[3] / 2
-        # bbox=tuple(bbox)
-        bbox=detection["bounding_box"]
-        
         fiftyone_detections.append(
             fo.Detection(
-                bounding_box=bbox,
-                confidence=detection["confidence"],
-                label=detection["class_name"]
+                bounding_box=detection.bounding_box,
+                confidence=detection.conf,
+                label=detection.class_name
             )
         )
 
