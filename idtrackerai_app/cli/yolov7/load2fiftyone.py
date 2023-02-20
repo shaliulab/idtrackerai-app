@@ -1,4 +1,5 @@
 import os.path
+import re
 import glob
 import shutil
 import argparse
@@ -11,9 +12,25 @@ from idtrackerai.utils.py_utils import download_file, list_files
 FIFTYONE_DATASETS="/Users/FlySleepLab_Dropbox/Data/flyhostel_data/fiftyone"
 
 
+def parse_experiment_from_label_file(label_file):
+    pattern = os.path.join("FlyHostel([0-9])", "([0-9]*)X", "([0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]_[0-9][0-9]-[0-9][0-9]-[0-9][0-9])")
+    result = re.search(pattern, label_file)
+    flyhostel_id = int(result.group(1))
+    number_of_animals = int(result.group(2))
+    date_time = result.group(3)
+    experiment=f"FlyHostel{flyhostel_id}_{number_of_animals}X_{date_time}"
+    return experiment
+
 
 def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_id=None, count=None, n_jobs=1):
 
+    """
+        frames_folder (str): Path where .png files are saved for imperfect frames that have been annotated
+        labels_folder (str): Path where .txt files are saved containing the annotation of the corresponding imperfect frame
+        dataset_name (str): Name of an existing fiftyone dataset
+        class_id (int): Identifier of the detection's class in the fiftyone dataset
+        count (int): Target number of detections in the frames
+    """
 
     if labels_folder.startswith("http://"):
         # label_files = list_files(labels_folder, "*")
@@ -42,9 +59,16 @@ def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_i
 
     def add_to_dataset(label_file, detections=None, add_sample=True, experiment=None):
 
+        # the key describes the frame number chunk and frame_idx of the frame
         key = os.path.splitext(os.path.basename(label_file))[0]
         image_file = os.path.join(frames_folder, key+".png")
-        image_file_in_fiftyone = os.path.join(FIFTYONE_DATASETS, dataset_name, "images", key+".png")
+        # experiment describes the flyhostel setup and start time that the frame comes from
+
+        # experiment and key combined are unique and will never repeat again
+        # this way the image name makes retrieving it back in the video possible (unambiguous)
+
+        experiment = parse_experiment_from_label_file(label_file)
+        image_file_in_fiftyone = os.path.join(FIFTYONE_DATASETS, dataset_name, "images", f"{experiment}_{key}.png")
 
         if image_file.startswith("http://"):
             print(f"Downloading {image_file}")
