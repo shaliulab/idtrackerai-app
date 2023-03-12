@@ -279,9 +279,6 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(True)
 
     def integration(self):
-        import ipdb; ipdb.set_trace()
-
-
         integrate_yolov7(
             store_path=os.path.realpath(self.video_path),
             n_jobs=conf.NUMBER_OF_JOBS_FOR_INTEGRATION,
