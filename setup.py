@@ -47,6 +47,9 @@ setup(
             "load-video=idtrackerai_app.cli.loaders:main",
             "annotate-scenes=idtrackerai_app.cli.annotation:main",
             "load2fiftyone=idtrackerai_app.cli.yolov7.load2fiftyone:main",
+            "concatenate-chunks=idtrackerai_app.cli.utils.overlap:main",
+            "correct-scenes=idtrackerai_app.cli.annotation:correct_scenes_main",
+            "view-corrections=idtrackerai_app.cli.annotation:view_corrections_main",
         ],
     },
 )

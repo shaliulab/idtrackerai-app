@@ -3,6 +3,7 @@ import os.path
 import itertools
 import warnings
 import re
+import logging
 import numpy as np
 import pandas as pd
 import joblib
@@ -10,6 +11,10 @@ from tqdm.auto import tqdm
 
 from idtrackerai.list_of_blobs.overlap import compute_overlapping_between_two_subsequent_frames
 from idtrackerai.list_of_blobs import ListOfBlobs
+from imgstore.stores.utils.mixins.extract import _extract_store_metadata
+
+logger=logging.getLogger(__name__)
+
 
 def get_parser():
 
@@ -17,6 +22,12 @@ def get_parser():
     ap.add_argument("--store-path", type=str, help="path to metaidentity_table.yaml")
     ap.add_argument("--chunks", type=int, nargs="+")
     ap.add_argument("--n-jobs", type=int, default=1)
+    ap.add_argument("--strict", action="store_true", default=True, help=
+    """Whether strict identity propagation policy should be used or not.
+    If True, an identity is propagated to the next chunk if and only if a single blob in the last frame overlaps with a blob in the first frame of the next chunk
+    and both have a non-zero final identity
+    """)
+    ap.add_argument("--not-strict", dest="strict", action="store_false", default=True)
     return ap
 
 
@@ -47,17 +58,21 @@ def process_chunk(store_path, chunk):
         for ((fn, i), (fnp1, j)) in overlap_pattern:
             blob_before=frame_before[i]
             blob_after=frame_after[j]
-            identity_before=blob_before.identity
-            if identity_before is None:
-                identity_before=0
-            identity_after=blob_after.identity
+            ai_identity=blob_before.identity
+            identity=blob_before.final_identities[-1]
+            if identity is None:
+                identity=0
+            identity_after=blob_after.final_identities[-1]
+            ai_identity_after=blob_after.identity
             if identity_after is None:
                 identity_after=0
 
             pattern.append((
                 chunk,
-                blob_before.in_frame_index, blob_after.in_frame_index,
-                identity_before, identity_after
+                blob_before.in_frame_index,
+                blob_after.in_frame_index,
+                ai_identity, ai_identity_after,
+                identity, identity_after
             ))
 
     else:
@@ -75,14 +90,15 @@ def main():
     else:
         chunks = args.chunks
 
-    process_all_chunks(args.store_path, chunks, n_jobs=args.n_jobs)
+    print(f"Strict policy: {args.strict}")
+
+    process_all_chunks(args.store_path, chunks, n_jobs=args.n_jobs, strict=args.strict)
 
 
-def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50):
 
+def compute_identity_table(store_path, chunks, n_jobs=1):
     basedir = os.path.dirname(store_path)
     temp_csv_file=os.path.join(basedir, "idtrackerai", "temp_concatenation-overlap.csv")
-    csv_file=os.path.join(basedir, "idtrackerai", "concatenation-overlap.csv")
 
 
     overlap_pattern = joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(process_chunk)(
@@ -93,26 +109,85 @@ def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50):
 
     records=itertools.chain(*overlap_pattern)
     identity_table=pd.DataFrame.from_records(records)
-    identity_table.columns=["chunk", "in_frame_index_before", "in_frame_index_after", "local_identity", "local_identity_after"]
+    identity_table.columns=["chunk", "in_frame_index_before", "in_frame_index_after", "ai_identity","ai_identity_after", "local_identity", "local_identity_after"]
     identity_table.to_csv(temp_csv_file)
-    number_of_animals=int(re.search("FlyHostel[0-9]/([0-9]*)X/", store_path).group(1))
 
+
+    strict=_extract_store_metadata(store_path).get("strict_identity", True)
 
     identity_table=identity_table.loc[pd.notna(identity_table["local_identity"])]
     assert identity_table.shape[0] > 0, f"Corruped identity table (see {temp_csv_file})"
     identity_table["identity"]=0
+    identity_table["is_inferred"]=False
+    identity_table["is_broken"]=False
+
+    return identity_table
+
+
+def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50, strict=True):
+    basedir = os.path.dirname(store_path)
+    csv_file=os.path.join(basedir, "idtrackerai", "concatenation-overlap.csv")
+
+    number_of_animals=int(re.search("FlyHostel[0-9]/([0-9]*)X/", store_path).group(1))
+    identity_table=compute_identity_table(store_path, chunks, n_jobs=n_jobs)
 
     chunks=sorted(list(set(identity_table["chunk"].values.tolist())))
     identity_table = propagate_identities(
         identity_table,
         chunks,
         ref_chunk=ref_chunk,
-        number_of_animals=number_of_animals
+        number_of_animals=number_of_animals,
+        strict=strict
     )
     identity_table.to_csv(csv_file)
 
 
-def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals=None):
+
+def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, local_identity, strict=True):
+    """
+    Returns the cross-chunk identity of the blob in the previous chunk that overlaps with a blob in the present chunk
+    If a past blob that overlaps with the passed local_identity is not found, and strict is False, the function assumes
+    there must be one that overlaps with a blob with local identity 0 (which later becomes the passed local_identity),
+    and so, uses the identity transferred via the misidentified blob
+
+    If more than 1 blob with local identity 0 is found in the present chunk, strict has no effect, which means the returned identity will be 0
+
+    is_inferred: Whether at least one of the local identities of this track in any past chunk was 0
+    is_broken: Whether an identity in the immediately past chunk can be matched
+    """
+    assert local_identity != 0
+
+    identity=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "identity"]
+
+    if len(identity) == 0:
+        is_broken=True
+        if strict:
+            identity = 0
+            is_inferred=False
+
+        else:
+            identity = identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == 0), "identity"]
+            is_inferred=True
+            if len(identity) == 1:
+                identity = identity.item()
+                is_inferred=True
+            else:
+                identity = 0
+                is_inferred=False
+
+    elif len(identity) > 1:
+        is_broken=True
+        identity=0
+        is_inferred=False
+
+    else:
+        is_broken=False
+        identity=identity.item()
+        is_inferred=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "is_inferred"].item()
+
+    return identity, is_inferred, is_broken
+
+def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals=None, strict=True):
     """
     Propagate the identity of the blobs in the reference chunk
     to the overlapping blobs in future chunks of the recording
@@ -141,6 +216,9 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
            the function emits a warning when an animal with an assigned identity of 0
            is detected (which means it does not have a cross-chunk identity)
 
+        strict (bool): If True, the identity is propagated only if the overlapping blobs in both chunks have an assigned identity,
+        if False, it is inferred from the missing identity in the next chunk
+
     Returns:
         identity_table (pd.DataFrame): Same table as before with new column "identity" which contains a consistent identity across chunks
     """
@@ -155,32 +233,70 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
     chunks = chunks[chunks.index(ref_chunk):]
 
     for chunk in tqdm(chunks, desc="Propagating identities", unit="chunk"):
+        logger.debug(f"Propagating identities for chunk {chunk}")
         current_chunk=identity_table.loc[identity_table["chunk"] == chunk]
+
         if chunk == ref_chunk:
             identity_table.loc[current_chunk.index, "identity"]=identity_table.loc[current_chunk.index, "local_identity"]
 
         else:
-            for local_identity in current_chunk["local_identity"]:
+            for i in range(current_chunk.shape[0]):
+
+                local_identity = current_chunk.iloc[i]["local_identity"]
+                indexer = identity_table.loc[identity_table["chunk"] == chunk].iloc[i].name
+
                 if local_identity == 0:
                     if number_of_animals > 1:
                         warnings.warn(f"Missing identification in chunk {chunk}")
+                        is_broken=True
+                        identity=None
+                    else:
+                        identity = 0
                     # whatever the number of animals,
                     # the temporary identity in the data frame (0)
                     # is left unchanged
                     # to represent that a cross-chunk identity cannot be assigned
                     # to this local identity in this chunk
-                    continue
-                # get the identity of the blob in the previous chunk that overlapped with a blob in this chunk with the current identity
-                # i.e. the current blob
-                identity=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "identity"]
-                if len(identity) == 0:
-                    identity = 0
                 else:
-                    identity=identity.item()
+                    # get the identity of the blob in the previous chunk that overlapped with a blob in this chunk with the current identity
+                    # i.e. the current blob
+                    identity, is_inferred, is_broken=get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, local_identity, strict=strict)
 
+                    # assign to the current blob that identity
+                    identity_table.loc[indexer, "identity"] = identity
+                    identity_table.loc[indexer, "is_inferred"] = is_inferred
+                    identity_table.loc[indexer, "is_broken"] = is_broken
 
-                # assign to the current blob that identity
-                identity_table.loc[identity_table.loc[(identity_table["chunk"] == chunk) & (identity_table["local_identity"] == local_identity)].index, "identity"] = identity
+            if not strict and chunk != chunks[-1]:
+                current_chunk = identity_table.loc[(identity_table["chunk"] == chunk),]
+                if current_chunk.shape[0] != number_of_animals:
+                    found_lids, target_lids, missing_lids = feature_stats(identity_table, chunk, "local_identity", number_of_animals)
+                    found_ids, target_ids, missing_ids = feature_stats(identity_table, chunk, "identity", number_of_animals)
+                    found_lidas, target_lidas, missing_lidas = feature_stats(identity_table, chunk, "local_identity_after", number_of_animals)
+                    warnings.warn("Missing ids: {missing_ids} in chunk {chunk}")
+                    for missing_local_identity, missing_identity, missing_local_identity_after in zip(missing_lids, missing_ids, missing_lidas):
+                        template = identity_table.iloc[0].copy()
+                        template["chunk"]=chunk
+                        template["local_identity"]=missing_local_identity
+                        template["local_identity_after"]=missing_local_identity_after
+                        template["identity"]=missing_identity
+                        template["is_inferred"]=True
+                        template["is_broken"]=True
+                        identity_table=pd.concat([
+                            identity_table[identity_table.columns],
+                            pd.DataFrame(template).T[identity_table.columns]
+                        ], axis=0)
 
+        identity_table.reset_index(inplace=True)
+        identity_table.drop("index", inplace=True, axis=1)
+        identity_table=identity_table.sort_values(["chunk", "local_identity"],)
 
     return identity_table
+
+
+def feature_stats(identity_table, chunk, feature, number_of_animals):
+    current_chunk=identity_table.loc[identity_table["chunk"] == chunk]
+    found = set(current_chunk[feature].values.tolist())
+    target = set(list(range(1, number_of_animals+1)))
+    missing = list(target.difference(found))
+    return found, target, missing

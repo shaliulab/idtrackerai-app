@@ -279,6 +279,8 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(True)
 
     def integration(self):
+        import ipdb; ipdb.set_trace()
+
 
         integrate_yolov7(
             store_path=os.path.realpath(self.video_path),
@@ -292,7 +294,7 @@ class BaseIdTrackerAi(
     def preprocessing(self):
         """
         Segment the input video and produce
-        
+
         * list_of_blobs
         * list_of_fragments
         * list_of_global_fragments
@@ -332,13 +334,13 @@ class BaseIdTrackerAi(
         fragmentation_start=time.time()
         self.load()
         self._step1_get_user_defined_parameters()
-        try:       
+        try:
             self._step2_preprocessing_crossings_detection_and_fragmentation()
 
         except Exception as e:
             logger.error(e, exc_info=True)
             self.critical(str(e), "Error")
-            
+
         finally:
             self.save()
             fragmentation_end=time.time()
@@ -363,11 +365,11 @@ class BaseIdTrackerAi(
             self.save()
             tracking_end = time.time()
             logger.info(f"DONE tracking in {tracking_end - tracking_start} seconds")
-            
-            
+
+
     @staticmethod
     def select_preferred_path(path, preferred):
-        
+
         if preferred is None:
             return path
 
@@ -375,7 +377,7 @@ class BaseIdTrackerAi(
         preferred_path = path.replace(ext, preferred+ext)
         if os.path.exists(preferred_path):
             path = preferred_path
-        
+
         return path
 
 
@@ -404,7 +406,7 @@ class BaseIdTrackerAi(
 
         self.video_object = np.load(video_path, allow_pickle=True).item()
         blobs_path = self.select_preferred_path(self.video_object.blobs_path, preferred)
-            
+
         self.list_of_blobs=ListOfBlobs.load(blobs_path)
         try:
             fragments_path = self.select_preferred_path(self.video_object.fragments_path, preferred)
@@ -448,10 +450,10 @@ class BaseIdTrackerAi(
 
         # INIT AND POPULATE VIDEO OBJECT WITH PARAMETERS
         if self.video_object is None:
-            
+
             chunk = int(self._session.value)
             logger.info(f"Parsing chunk value from session: {chunk}")
-            
+
             logger.info(f"Selected chunk {chunk}")
             logger.info("START: INIT VIDEO OBJECT")
             self.video_object = Video(
@@ -570,12 +572,12 @@ class BaseIdTrackerAi(
         )
         self._progress.value = 0
         self._final_message = self.SEGMENTATION_CHECK_FINAL_MESSAGE
-        
+
     def _step2_preprocessing(self):
         self._step2_preprocessing_segmentation()
         return self._step2_preprocessing_crossings_detection_and_fragmentation()
-    
-    
+
+
     def _step2_preprocessing_segmentation(self):
 
         logger.info("START: ANIMAL DETECTION")
@@ -584,13 +586,13 @@ class BaseIdTrackerAi(
         self.list_of_blobs.compute_overlapping_between_subsequent_frames()
         # Check segmentation consistency
         segmentation_consistent = animals_detector.check_segmentation(original=False)
-        
+
         if segmentation_consistent["more"] and self._chcksegm.value:
             outfile_path = animals_detector.save_inconsistent_frames()
             self.save()  # saves video_object
             self.__output_segmentation_consistency_warning(outfile_path)
             return False  # This will make the tracking finish
-        
+
 
         animals_detector.remove_frames(conf.IMPERFECT_FRAMES_FOLDER, self.video_object._chunk)
         animals_detector.save_incomplete_frames(conf.IMPERFECT_FRAMES_FOLDER)
@@ -606,10 +608,10 @@ class BaseIdTrackerAi(
 
 
 
-        
+
         self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
-        
+
     def _step2_preprocessing_crossings_detection_and_fragmentation(self):
 
         logger.info("START: CROSSING DETECTION")

@@ -13,6 +13,6 @@
     "IDTRACKERAI_IS_TESTING": false,
     "SKIP_SAVING_IDENTIFICATION_IMAGES": false,
     "TIME_FORMAT": "H|CF",
-    "DATA_POLICY": "remove_segmentation_data",
+    "DATA_POLICY": "all",
     "EROSION_DISK_SKIP_EVERY_FRAME": 100
 }
