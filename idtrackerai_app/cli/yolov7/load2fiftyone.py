@@ -4,6 +4,8 @@ import glob
 import shutil
 import argparse
 import tempfile
+
+import pandas as pd
 import fiftyone as fo
 
 from idtrackerai.animals_detection.yolov7.yolov7 import load_detections
@@ -22,16 +24,27 @@ def parse_experiment_from_label_file(label_file):
     return experiment
 
 
-def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_id=None, count=None, n_jobs=1):
-
+def filter_by_chunks(paths, chunks):
     """
-        frames_folder (str): Path where .png files are saved for imperfect frames that have been annotated
-        labels_folder (str): Path where .txt files are saved containing the annotation of the corresponding imperfect frame
-        dataset_name (str): Name of an existing fiftyone dataset
-        class_id (int): Identifier of the detection's class in the fiftyone dataset
-        count (int): Target number of detections in the frames
+    Parse chunk membership from path (assuming .*_chunk-.*)
+    and keep paths whose chunk is within the passed chunks
     """
 
+    path_chunks = []
+    for path in paths:
+        key = "_".join(os.path.basename(path).split("_")[-2:])
+        chunk=int(key.split("_")[1].split("-")[0])
+        path_chunks.append(chunk)
+
+
+    df=pd.DataFrame({"chunk": path_chunks, "file": paths})
+    df=df.loc[df["chunk"].isin(chunks)]
+    paths=df["file"].values.tolist()
+    return paths
+
+
+
+def get_label_files(labels_folder):
     if labels_folder.startswith("http://"):
         # label_files = list_files(labels_folder, "*")
         index = tempfile.mktemp(prefix="load2fiftyone", suffix=".txt")
@@ -50,6 +63,23 @@ def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_i
         assert os.path.exists(labels_folder), f"{labels_folder} not found"
         label_files = sorted(glob.glob(os.path.join(labels_folder, "*")))
         label_files = [file for file in label_files if os.path.basename(file) != "index.txt"]
+
+
+    return label_files
+
+def load_dataset_to_fiftyone(frames_folder, labels_folder, dataset_name, class_id=None, count=None, n_jobs=1, chunks=None):
+
+    """
+        frames_folder (str): Path where .png files are saved for imperfect frames that have been annotated
+        labels_folder (str): Path where .txt files are saved containing the annotation of the corresponding imperfect frame
+        dataset_name (str): Name of an existing fiftyone dataset
+        class_id (int): Identifier of the detection's class in the fiftyone dataset
+        count (int): Target number of detections in the frames
+    """
+
+    label_files = get_label_files(labels_folder)
+    if chunks is not None:
+        label_files = filter_by_chunks(label_files, chunks)
 
     try:
         dataset = fo.load_dataset(dataset_name)
@@ -111,12 +141,13 @@ def detections2fiftyone(detections):
 def get_parser():
 
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dataset", help="name of fiftyone dataset")
-    ap.add_argument("--frames-folder", help="path to folder containing frames input to YOLOv7, typically lots of png files")
-    ap.add_argument("--labels-folder", help="path to folder containing labels produced by YOLOv7, typically one .txt file for each .png in the frames folder")
+    ap.add_argument("--dataset", help="name of fiftyone dataset", required=True)
+    ap.add_argument("--frames-folder", help="path to folder containing frames input to YOLOv7, typically lots of png files. Can be passed with http protocol")
+    ap.add_argument("--labels-folder", help="path to folder containing labels produced by YOLOv7, typically one .txt file for each .png in the frames folder. Can be passed with http protocol")
     ap.add_argument("--count", type=int, help="target number of detections in each .png", default=None)
     ap.add_argument("--n-jobs", type=int, help="Number of parallel jobs", default=1)
     ap.add_argument("--class-id", type=int, help="target class id", default=None)
+    ap.add_argument("--chunks", default=None, type=int, help="Filter by chunks, all chunks will be included if this flag is not specified", nargs="+")
     return ap
 
 def main():
@@ -126,6 +157,7 @@ def main():
 
     detections=load_dataset_to_fiftyone(
         frames_folder=args.frames_folder, labels_folder=args.labels_folder,
-        dataset_name=args.dataset, class_id=args.class_id, count=args.count, n_jobs=args.n_jobs
+        dataset_name=args.dataset, class_id=args.class_id, count=args.count, n_jobs=args.n_jobs,
+        chunks=args.chunks
     )
     return detections
