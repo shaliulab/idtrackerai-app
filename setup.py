@@ -50,6 +50,7 @@ setup(
             "concatenate-chunks=idtrackerai_app.cli.utils.overlap:main",
             "correct-scenes=idtrackerai_app.cli.annotation:correct_scenes_main",
             "view-corrections=idtrackerai_app.cli.annotation:view_corrections_main",
+            "init-idtrackerai=idtrackerai_app.cli.init:init_idtrackerai",
         ],
     },
 )
