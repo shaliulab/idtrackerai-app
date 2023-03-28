@@ -27,5 +27,8 @@ def init_idtrackerai():
     with open("idtrackerai/local_settings.py", "w") as filehandle:
         filehandle.write(local_settings_file)
 
-    os.remove("index.db")
+    try:
+        os.remove("index.db")
+    except FileNotFoundError:
+        pass
 
