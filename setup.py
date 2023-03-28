@@ -51,6 +51,8 @@ setup(
             "correct-scenes=idtrackerai_app.cli.annotation:correct_scenes_main",
             "view-corrections=idtrackerai_app.cli.annotation:view_corrections_main",
             "init-idtrackerai=idtrackerai_app.cli.init:init_idtrackerai",
+            "upload-blobs-to-vsc=idtrackerai_app.cli.transfer:upload_blob_collections",
+            "download-blobs-from-vsc=idtrackerai_app.cli.transfer:download_blob_collections",
         ],
     },
 )
