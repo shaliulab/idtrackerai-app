@@ -7,9 +7,6 @@ from idtrackerai_app.cli.transfer.transfer import transfer_file
 
 from .utils import get_blobs_collection
 
-FLYHOSTEL_VIDEOS=os.environ["FLYHOSTEL_VIDEOS"]
-REMOTE_VIDEOS="/Users/FlySleepLab_Dropbox/Data/flyhostel_data/videos"
-
 def get_parser():
     ap = argparse.ArgumentParser()
     ap.add_argument("--experiment", required=True)
@@ -44,6 +41,10 @@ def main():
 
 def send_from_vsc(experiment, chunks):
     server = "cv3"
+    FLYHOSTEL_VIDEOS=os.environ["FLYHOSTEL_VIDEOS"]
+    REMOTE_VIDEOS="/Users/FlySleepLab_Dropbox/Data/flyhostel_data/videos"
+
+
     
     for chunk in chunks:
         blobs_collection=get_blobs_collection(FLYHOSTEL_VIDEOS, experiment, chunk)
@@ -54,11 +55,15 @@ def send_from_vsc(experiment, chunks):
 
 def download_from_vsc(experiment, chunks):
     server = "login"
+    FLYHOSTEL_VIDEOS=os.environ["FLYHOSTEL_VIDEOS"]
+    REMOTE_VIDEOS="/staging/leuven/stg_00115/Data/flyhostel_data/videos"
+
+
     
     for chunk in chunks:
         blobs_collection=get_blobs_collection(FLYHOSTEL_VIDEOS, experiment, chunk)
         remote_blobs_collection=get_blobs_collection(REMOTE_VIDEOS, experiment, chunk)
-        print(f"{server}{remote_blobs_collection} -> {blobs_collection}")
+        print(f"{server}:{remote_blobs_collection} -> {blobs_collection}")
         transfer_file(server + ":" + remote_blobs_collection, blobs_collection, update=True)
 
 
