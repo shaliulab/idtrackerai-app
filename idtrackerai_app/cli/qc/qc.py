@@ -38,10 +38,11 @@ def verify_list_of_blobs_identity(experiment, chunk):
 
     for blobs_in_frame in list_of_blobs.blobs_in_video:
         identities=[]
+        blob=None
         for blob in blobs_in_frame:
             identities.append(blob.final_identities[0])
 
-        if all([identity is None for identity in identities]):
+        if blob is not None and all([identity is None for identity in identities]):
             frame_number = blob.frame_number
             missing_identification.append(frame_number)
 
