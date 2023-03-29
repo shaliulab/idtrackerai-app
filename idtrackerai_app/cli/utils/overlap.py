@@ -55,6 +55,8 @@ def process_chunk(store_path, chunk):
 
         overlap_pattern=compute_overlapping_between_two_subsequent_frames(frame_before, frame_after, queue=None, do=False)
 
+        identities = []
+
         for ((fn, i), (fnp1, j)) in overlap_pattern:
             blob_before=frame_before[i]
             blob_after=frame_after[j]
@@ -74,6 +76,10 @@ def process_chunk(store_path, chunk):
                 ai_identity, ai_identity_after,
                 identity, identity_after
             ))
+            identities.append(identity)
+
+        identities, counts = np.unique(identities, return_count=True)
+        assert all(counts == 1)
 
     else:
         print(f"Cannot compute overlap between chunks {chunk} and {chunk+1} for experiment {store_path}")
@@ -116,7 +122,7 @@ def compute_identity_table(store_path, chunks, n_jobs=1):
     strict=_extract_store_metadata(store_path).get("strict_identity", True)
 
     identity_table=identity_table.loc[pd.notna(identity_table["local_identity"])]
-    assert identity_table.shape[0] > 0, f"Corruped identity table (see {temp_csv_file})"
+    assert identity_table.shape[0] > 0, f"Corrupted identity table (see {temp_csv_file})"
     identity_table["identity"]=0
     identity_table["is_inferred"]=False
     identity_table["is_broken"]=False
@@ -153,9 +159,14 @@ def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, lo
     If more than 1 blob with local identity 0 is found in the present chunk, strict has no effect, which means the returned identity will be 0
 
     is_inferred: Whether at least one of the local identities of this track in any past chunk was 0
-    is_broken: Whether an identity in the immediately past chunk can be matched
+    is_broken: Whether an identity in the immediately past chunk can be matched (is_broken=False) or not (is_broken=True)
     """
     assert local_identity != 0
+
+    # the cross-chunk identity of this blob is:
+    #    1) that of the blob in the previous chunk
+    #    2) which overlaps with a blob in this chunk with the local identity of this chunk i.e. this blob
+    # = that of the blob in the previous chunk which overlaps with this chunk
 
     identity=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "identity"]
 
