@@ -10,6 +10,7 @@ def get_parser():
     ap = argparse.ArgumentParser()
     ap.add_argument("--experiment", required=True)
     ap.add_argument("--chunks", type=int, nargs="+", required=True)
+    ap.add_argument("--n-jobs", type=int, default=1)
     return ap
 
 def main():
@@ -17,12 +18,13 @@ def main():
     ap = get_parser()
 
     args = ap.parse_args()
-    output = joblib.Parallel(n_jobs=n_jobs)(
+    chunks = args.chunks
+    output = joblib.Parallel(n_jobs=args.n_jobs)(
         joblib.delayed(
             verify_list_of_blobs_identity
         )(
             experiment=args.experiment, chunk=chunk
-        ) for chunk in args.chunks
+        ) for chunk in chunks
     )
 
     for i, chunk in enumerate(chunks):
@@ -44,4 +46,3 @@ def verify_list_of_blobs_identity(experiment, chunk):
             missing_identification.append(frame_number)
 
     return missing_identification
-
