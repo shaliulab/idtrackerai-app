@@ -4,8 +4,7 @@ import os.path
 import pandas as pd
 
 from idtrackerai_app.cli.transfer.transfer import transfer_file
-
-from .utils import get_blobs_collection
+from idtrackerai_app.cli.utils.blobs import get_blobs_collection
 
 def get_parser():
     ap = argparse.ArgumentParser()
@@ -29,7 +28,7 @@ def main():
 
         concatenation = pd.read_csv(concatenation_file)
         chunks0 = sorted(list(set(concatenation.loc[concatenation["local_identity"] == 0, "chunk"].tolist())))
-        
+
         chunks1= concatenation.loc[concatenation["local_identity_after"] == 0, "chunk"]+1
         chunks1=sorted(list(set(chunks1.tolist())))
         chunks = chunks0 + chunks1
@@ -45,7 +44,7 @@ def send_from_vsc(experiment, chunks):
     REMOTE_VIDEOS="/Users/FlySleepLab_Dropbox/Data/flyhostel_data/videos"
 
 
-    
+
     for chunk in chunks:
         blobs_collection=get_blobs_collection(FLYHOSTEL_VIDEOS, experiment, chunk)
         remote_blobs_collection=get_blobs_collection(REMOTE_VIDEOS, experiment, chunk)
@@ -59,7 +58,7 @@ def download_from_vsc(experiment, chunks):
     REMOTE_VIDEOS="/staging/leuven/stg_00115/Data/flyhostel_data/videos"
 
 
-    
+
     for chunk in chunks:
         blobs_collection=get_blobs_collection(FLYHOSTEL_VIDEOS, experiment, chunk)
         remote_blobs_collection=get_blobs_collection(REMOTE_VIDEOS, experiment, chunk)

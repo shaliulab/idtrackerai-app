@@ -4,8 +4,7 @@ import os.path
 import pandas as pd
 
 from idtrackerai_app.cli.transfer.transfer import transfer_file
-
-from .utils import get_blobs_collection
+from idtrackerai_app.cli.utils.blobs import get_blobs_collection
 
 FLYHOSTEL_VIDEOS=os.environ["FLYHOSTEL_VIDEOS"]
 REMOTE_VIDEOS="/staging/leuven/stg_00115/Data/flyhostel_data/videos"
@@ -41,7 +40,7 @@ def main():
 
 
 def upload_to_vsc(experiment, chunks, dry_run=False):
-    
+
     for chunk in chunks:
         blobs_collection=get_blobs_collection(FLYHOSTEL_VIDEOS, experiment, chunk)
         remote_blobs_collection=get_blobs_collection(REMOTE_VIDEOS, experiment, chunk)
