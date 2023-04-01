@@ -1,9 +1,2 @@
-from .ts import main
-
-
-def start():
-    return main()
-
-
-if __name__ == "__main__":
-    main()
+from .ts import main as start_ts
+from .nextflow import main as start_nextflow
