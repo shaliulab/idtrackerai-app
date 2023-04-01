@@ -1,4 +1,3 @@
-import stat
 import time
 import shlex
 import subprocess
@@ -15,18 +14,6 @@ TS_FILE = tempfile.NamedTemporaryFile(prefix="ts").name
 #os.makedirs(os.path.dirname(TS_FILE), exist_ok=True)
 
 
-def write_shell_script(path, lines):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-
-    with open(path, "w") as filehandle:
-        filehandle.write("#! /bin/bash\n")
-        for line in lines:
-            filehandle.write(line.rstrip("\n"))
-            filehandle.write("\n")
-        # filehandle.write("echo 'Hello World'")
-        filehandle.write("\n")
-    os.chmod(path, stat.S_IRWXU)
-    return os.path.exists(path)
 
 
 def ts_sub(
