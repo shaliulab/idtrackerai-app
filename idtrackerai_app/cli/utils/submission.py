@@ -9,7 +9,7 @@ import yaml
 
 SETTINGS_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), "settings.json")
 
-assert os.path.exists(SETTINGS_JSON)
+assert os.path.exists(SETTINGS_JSON), f"{SETTINGS_JSON} not found"
 from idtrackerai.constants import ANALYSIS_FOLDER
 
 
