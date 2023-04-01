@@ -72,18 +72,18 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
            2. in the preprocessing folder in pickle format (ai.pkl) a dictionary with the succesful and unsuccessful frame numbers
 
     Arguments:
-    
+
         * store_path (str): Path to a metadata.yaml
         * chunk (int): Chunk of the imgstore linked to the metadata to be processed
         * input (str): Folder containing labels produced by the AI system
         * output (str): Folder on which to store logs of the process
         * allowed_class (dict): If passed, only classes within the contained keys will be used, the rest will be ignored
         If None, all are used
-    
+
     Returns:
         * chunk (int): Passed chunk
         * sucess_rate (float): Fraction of frames processed by the AI system that meet the success criteria
-    
+
     See annotate_chunk_with_yolov7 for details
 
     """
@@ -113,7 +113,7 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
         _, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
         processed_successfully = len(successful_frames)
         success_rate=round(processed_successfully/len(frames), 3)
-        
+
     else:
         success_rate= "OK"
         processed_successfully=0
@@ -129,7 +129,7 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
     pkl_file = os.path.join(basedir, "idtrackerai", f"session_{str(chunk).zfill(6)}", "preprocessing", "ai.pkl")
     with open(pkl_file, "wb") as filehandle:
         pickle.dump({"success": successful_frames, "fail": failed_frames}, filehandle)
-    
+
     return chunk, success_rate
 
 if __name__ == "__main__":

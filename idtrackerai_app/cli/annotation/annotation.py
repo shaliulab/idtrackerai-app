@@ -27,8 +27,8 @@ def get_parser():
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--store-path", required=True, help="Path to metadata.yaml")
-    ap.add_argument("--mp4", default=False, action="store_true")
-    ap.add_argument("--png", default=False, action="store_true")
+    ap.add_argument("--mp4", default=False, action="store_true", help="Output format")
+    ap.add_argument("--png", default=False, action="store_true", help="Output format")
     ap.add_argument("--annotate", default=False, action="store_true", help="Whether to run blob.draw() or not")
     ap.add_argument("--blob-index", default=False, action="store_true", help="Whether to write the in frame index next to the identity or not")
     ap.add_argument("--chunks", type=int, nargs="+", required=True)

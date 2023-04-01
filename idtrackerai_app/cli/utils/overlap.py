@@ -78,8 +78,9 @@ def process_chunk(store_path, chunk):
             ))
             identities.append(identity)
 
-        identities, counts = np.unique(identities, return_count=True)
-        assert all(counts == 1)
+        identities, counts = np.unique(identities, return_counts=True)
+        if not all(counts == 1):
+            warnings.warn(f"Identities repeated in chunk {chunk}. Identities {identities}, counts {counts}")
 
     else:
         print(f"Cannot compute overlap between chunks {chunk} and {chunk+1} for experiment {store_path}")
