@@ -27,6 +27,7 @@ def main():
     store_path = args.store_path
     
     skip_saving_identification_images=False
+    reconnect_blobs_from_cache=None
     skip_every_frame=1
     wait_for=[]
     submit=False
