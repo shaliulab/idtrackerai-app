@@ -286,6 +286,14 @@ class BaseIdTrackerAi(
             input=conf.AI_LABELS_FOLDER,
             output=".",
          )
+         self.save_success_file("integration")
+
+    def save_success_file(self, step):
+        folder = os.path.join(self.video_folder, conf.ANALYSIS_FOLDER, "logs")
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, f"session_{str(self._session.value).zfill(6)}_{step}.txt")
+        with open(path, "w") as filehandle:
+            filehandle.write("DONE\n")
 
 
     def preprocessing(self):
@@ -307,6 +315,7 @@ class BaseIdTrackerAi(
             # success will be False if there are more blobs than animals and
             # the user asked to check the segmentation consistency
             success = self._step2_preprocessing_segmentation()
+            self.save_success_file("preprocessing")
             return success
 
         except Exception as error:
@@ -333,6 +342,7 @@ class BaseIdTrackerAi(
         self._step1_get_user_defined_parameters()
         try:
             self._step2_preprocessing_crossings_detection_and_fragmentation()
+            self.save_success_file("crossings_detection_and_fragmentation")
 
         except Exception as e:
             logger.error(e, exc_info=True)
@@ -353,6 +363,7 @@ class BaseIdTrackerAi(
             if success:
                 # This flag is important to register the smoke tests that work
                 logger.info("Success")
+                self.save_success_file("tracking")
 
         except Exception as e:
             logger.error(e, exc_info=True)
