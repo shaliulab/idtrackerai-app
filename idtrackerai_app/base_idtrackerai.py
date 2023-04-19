@@ -249,6 +249,7 @@ class BaseIdTrackerAi(
 
 
     def track_video(self):
+        raise NotImplementedError()
         logger.info("Calling track_video")
         self._video.enabled = False
         self._session.enabled = False
@@ -279,17 +280,21 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(True)
 
     def integration(self):
-        integrate_yolov7(
+        self.load(step="preprocessing")
+        self.list_of_blobs = integrate_yolov7(
             store_path=os.path.realpath(self.video_path),
+            session_folder = self.video_object.session_folder,
             n_jobs=conf.NUMBER_OF_JOBS_FOR_INTEGRATION,
             chunks=[int(self._session.value)],
             input=conf.AI_LABELS_FOLDER,
             output=".",
-         )
-         self.save_success_file("integration")
+        )
+        self.save(step="integration")
+        self.save_success_file("integration")
+        
 
     def save_success_file(self, step):
-        folder = os.path.join(self.video_folder, conf.ANALYSIS_FOLDER, "logs")
+        folder = os.path.join(self.video_object.session_folder, "logs")
         os.makedirs(folder, exist_ok=True)
         path = os.path.join(folder, f"session_{str(self._session.value).zfill(6)}_{step}.txt")
         with open(path, "w") as filehandle:
@@ -322,14 +327,14 @@ class BaseIdTrackerAi(
             logger.error(error, exc_info=True)
             self.critical(str(error), "Error")
             try:
-                self.save()
+                self.save(step="preprocessing")
             except:
                 pass
             raise error
 
         finally:
             try:
-                self.save()
+                self.save(step="preprocessing")
                 preprocessing_end = time.time()
                 logger.info(f"DONE preprocessing in {preprocessing_end - preprocessing_start} seconds")
             except Exception as error:
@@ -338,7 +343,7 @@ class BaseIdTrackerAi(
 
     def crossings_detection_and_fragmentation(self):
         fragmentation_start=time.time()
-        self.load()
+        self.load(step="integration")
         self._step1_get_user_defined_parameters()
         try:
             self._step2_preprocessing_crossings_detection_and_fragmentation()
@@ -349,14 +354,14 @@ class BaseIdTrackerAi(
             self.critical(str(e), "Error")
 
         finally:
-            self.save()
+            self.save(step="crossings_detection_and_fragmentation")
             fragmentation_end=time.time()
             logger.info(f"DONE crossings_detection_and_fragmentation in {fragmentation_end - fragmentation_start} seconds")
 
     def tracking(self):
         # Training and identification and post processing
         tracking_start = time.time()
-        self.load(preferred="_feed_integration")
+        self.load(step="crossings_detection_and_fragmentation", preferred="_feed_integration")
         self._step1_get_user_defined_parameters()
         try:
             success = self._step3_tracking()
@@ -370,7 +375,7 @@ class BaseIdTrackerAi(
             self.critical(str(e), "Error")
 
         finally:
-            self.save()
+            self.save(step="tracking")
             tracking_end = time.time()
             logger.info(f"DONE tracking in {tracking_end - tracking_start} seconds")
 
@@ -389,7 +394,7 @@ class BaseIdTrackerAi(
         return path
 
 
-    def load(self, preferred=None):
+    def load(self, step, preferred=None):
         ########################################
         # TODO
         # Ensure state is preserved!
@@ -403,7 +408,7 @@ class BaseIdTrackerAi(
         logger.info("Loading objects to base_idtrackerai")
         video_path = self.select_preferred_path(
             os.path.join(
-                os.path.dirname(self.video_path), conf.ANALYSIS_FOLDER, f"session_{str(self._session.value).zfill(6)}",
+                f"session_{str(self._session.value).zfill(6)}",
                 "video_object.npy"
             ),
             preferred
@@ -413,7 +418,7 @@ class BaseIdTrackerAi(
             raise Exception(f"{video_path} does not exist. Are you sure you have run preprocessing for that session?")
 
         self.video_object = np.load(video_path, allow_pickle=True).item()
-        blobs_path = self.select_preferred_path(self.video_object.blobs_path, preferred)
+        blobs_path = self.select_preferred_path(self.video_object.get_blobs_path(step), preferred)
 
         self.list_of_blobs=ListOfBlobs.load(blobs_path)
         try:
@@ -433,11 +438,13 @@ class BaseIdTrackerAi(
         # self.list_of_global_fragments=tracker._get_global_fragments()
 
 
-    def save(self):
+    def save(self, step):
         logger.info("Saving objects from base_idtrackerai")
         self.video_object.save()
         if self.list_of_blobs is not None:
-            self.list_of_blobs.save(self.video_object.blobs_path)
+            blobs_collection=self.video_object.get_blobs_path(step)
+            os.makedirs(os.path.dirname(blobs_collection), exist_ok=True)
+            self.list_of_blobs.save(blobs_collection)
         if self.list_of_fragments is not None:
             self.list_of_fragments.save(self.video_object.fragments_path)
         if self.list_of_global_fragments is not None:
@@ -597,7 +604,7 @@ class BaseIdTrackerAi(
 
         if segmentation_consistent["more"] and self._chcksegm.value:
             outfile_path = animals_detector.save_inconsistent_frames()
-            self.save()  # saves video_object
+            self.save(step="preprocessing")  # saves video_object
             self.__output_segmentation_consistency_warning(outfile_path)
             return False  # This will make the tracking finish
 

@@ -57,10 +57,11 @@ def detect_incomplete_frames_in_episode(keys, number_of_animals):
 
 def detect_incomplete_frames_in_chunk_from_blobs_collection(store_path, chunk, output=None):
 
+    raise NotImplementedError
     incomplete_frames=[]
-    
+
     session_folder = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk).zfill(6)}")
-    blobs_collection_path = os.path.join(session_folder, "preprocessing", "blobs_collection.npy")
+    # blobs_collection_path = os.path.join(session_folder, "preprocessing", "blobs_collection.npy")
     list_of_blobs = ListOfBlobs.load(blobs_collection_path)
     video_object = np.load(os.path.join(session_folder, "video_object.npy"), allow_pickle=True).item()
 

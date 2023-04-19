@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 
 
 def write_shell_script(path, lines):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
 
     with open(path, "w") as filehandle:
         filehandle.write("#! /bin/bash\n")
@@ -35,32 +34,23 @@ def write_shell_script(path, lines):
 def make_session_script(
     config_file, chunk, command, before=[], wait_for=[]
 ):
+    """
+    """
 
     chunk_pad = str(chunk).zfill(6)
-    folder = "."
+    folder = ANALYSIS_FOLDER
 
-    session_script = os.path.join(
-        folder, f"session_{chunk_pad}", f"session_{chunk_pad}_{command}.sh"
-    )
+    session_script = f"session_{chunk_pad}_{command}.sh"
+
     output_file = os.path.join(
-        folder, f"session_{chunk_pad}", f"session_{chunk_pad}_{command}_output.txt"
+        folder, f"session_{chunk_pad}_{command}_output.txt"
     )
 
-    cmd = f"idtrackerai terminal_mode --_session {chunk_pad}  --load  {config_file} --exec {command}"
+    cmd = f"cd {ANALYSIS_FOLDER} && idtrackerai terminal_mode --_session {chunk_pad}  --load  {config_file} --exec {command}"
 
     label = f"{chunk}_{command}"
 
-    path = os.path.join(
-        os.path.dirname(os.path.dirname(session_script)),
-        os.path.basename(session_script),
-    )
-    write_shell_script(session_script, [*before, cmd])
-    shutil.copyfile(
-        session_script,
-        path,
-    )
-    print(f"Saving {path}")
-    
+    write_shell_script(session_script, [*before, cmd])  
     return session_script, output_file, label, wait_for, command
 
 
@@ -92,6 +82,7 @@ def save_local_settings(chunk, **kwargs):
     with open(SETTINGS_JSON, "r") as filehandle:
         settings = json.load(filehandle)
 
+
     for kwarg in kwargs:
         key = kwarg.upper()
         if kwargs[kwarg] is not None:
@@ -105,7 +96,7 @@ def save_local_settings(chunk, **kwargs):
             lines.append(f"{entry}={settings[entry]}")
 
     lines.append(f"CHUNK={chunk}")
-    path = os.path.join(f"session_{chunk_pad}-local_settings.py")
+    path = os.path.join(ANALYSIS_FOLDER, f"session_{chunk_pad}-local_settings.py")
     print(f"Saving {path}")
 
     with open(path, "w") as filehandle:
@@ -120,6 +111,12 @@ def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cac
     Write a shell script to the filesystem that completely encapsulates one idtrackerai pipeline step for a specific chunk of a specific experiment
 
     The shell script can be executed simply by runing `bash script.sh`
+
+    The script expects:
+
+    ANALYSIS_FOLDER/.mp4
+    ANALYSIS_FOLDER/.avi
+    
 
     Arguments:
 
@@ -138,18 +135,10 @@ def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cac
     """
 
     chunk_pad = str(chunk).zfill(6)
-    metadata_path = store_path
-    basedir = os.path.dirname(store_path)
-    
+    metadata_path = store_path   
 
     # make the idtrackerai folder and move to it 
-    logger.info(f"Making {basedir}/{ANALYSIS_FOLDER}")
-    working_dir = os.path.join(basedir, ANALYSIS_FOLDER)
-    cwd = os.path.realpath(working_dir)
-    os.makedirs(working_dir, exist_ok=True)
-    os.chdir(working_dir)
-
-
+    cwd= os.getcwd()
     # save the local_settings.py with the right chunk info
     local_settings_path = save_local_settings(
         chunk,
@@ -157,16 +146,20 @@ def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cac
         skip_saving_identification_images=skip_saving_identification_images,
         reconnect_blobs_from_cache=reconnect_blobs_from_cache
     )
-    copy_local_settings_cmd = f"cp {local_settings_path} local_settings.py"
+    copy_local_settings_cmd = f"cp {local_settings_path} {ANALYSIS_FOLDER}/local_settings.py"
 
     # symlink the video files from the main folder to the idtrackerai folder
-    with open(metadata_path, "r") as filehandle:
-        extension = yaml.load(filehandle, yaml.SafeLoader)["__store"]["extension"]
-    symlink_video(chunk_pad, extension)
+    try:
+        with open(metadata_path, "r") as filehandle:
+            extension = yaml.load(filehandle, yaml.SafeLoader)["__store"]["extension"]
+    except Exception as error:
+        print(os.getcwd())
+        raise error
 
     # symlink the config file to idtrackerai too
+    basedir = os.path.dirname(os.path.realpath(store_path))
     date_time = os.path.basename(basedir)
-    config_file = symlink_conf(date_time)
+    config_file = f"../{date_time}.conf"
 
     # write shell script
     session = make_session_script(

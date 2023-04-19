@@ -94,6 +94,7 @@ def process_chunk(store_path, chunk, min_duration=1, extension=".png", annotate=
         window_length (int): Number of frames in the scene
 
     """
+    STEP="integration"
 
     output_folder = os.path.join(os.path.dirname(store_path), FOLDER)
     store = VideoCapture(store_path, chunk)
@@ -112,7 +113,7 @@ def process_chunk(store_path, chunk, min_duration=1, extension=".png", annotate=
     basedir = os.path.dirname(store_path)
     session_folder = os.path.join(basedir, "idtrackerai", f"session_{str(chunk).zfill(6)}")
 
-    blobs_collection = os.path.join(session_folder, "preprocessing", "blobs_collection.npy")
+    blobs_collection = os.path.join(session_folder, STEP, "blobs_collection.npy")
     if not os.path.exists(blobs_collection):
         raise FileNotFoundError(f"{blobs_collection} does not exist. Please make sure idtrackerai_preprocessing has been run")
 
@@ -338,10 +339,10 @@ def correct_scenes_main():
     human_labels=pd.read_csv(human_labels_file)
     kwargs={f"{column}_l": human_labels[column].tolist() for column in human_labels.columns}
 
-    return correct_scenes(args.store_path, n_jobs=args.n_jobs, **kwargs)
+    return correct_scenes(args.store_path, n_jobs=args.n_jobs, step="correction", **kwargs)
 
 
-def correct_scenes(store_path, chunk_l, frame_index_l, in_frame_index_l, identity_l, n_jobs=1):
+def correct_scenes(store_path, chunk_l, frame_index_l, in_frame_index_l, identity_l, n_jobs=1, **kwargs):
 
     assert len(chunk_l) == len(frame_index_l) == len(in_frame_index_l) == len(identity_l)
 
@@ -372,13 +373,14 @@ def correct_scenes(store_path, chunk_l, frame_index_l, in_frame_index_l, identit
             store_path, chunk,
             frame_numbers=annotations_per_chunk[chunk][3],
             in_frame_index_l = annotations_per_chunk[chunk][1],
-            identity_l = annotations_per_chunk[chunk][2]
+            identity_l = annotations_per_chunk[chunk][2],
+            **kwargs
         )
         for chunk in chunks
     )
 
 
-def process_chunk_scenes(store_path, chunk, frame_numbers, in_frame_index_l, identity_l):
+def process_chunk_scenes(store_path, chunk, frame_numbers, in_frame_index_l, identity_l, step):
     """Modify the identity of multiple blobs across (different) chunks
 
     Args:
@@ -396,8 +398,9 @@ def process_chunk_scenes(store_path, chunk, frame_numbers, in_frame_index_l, ide
     """
 
     basedir = os.path.dirname(store_path)
-    session_folder = os.path.join(basedir, "idtrackerai", f"session_{str(chunk).zfill(6)}")
-    blobs_collection = os.path.join(session_folder, "preprocessing", "blobs_collection.npy")
+    folder = os.path.join(basedir, "idtrackerai", f"session_{str(chunk).zfill(6)}", step)
+    os.makedirs(folder, exist_ok=True)
+    blobs_collection = os.path.join(folder, "blobs_collection.npy")
     if not os.path.exists(blobs_collection):
         raise FileNotFoundError(f"{blobs_collection} does not exist. Please make sure idtrackerai_preprocessing has been run")
 

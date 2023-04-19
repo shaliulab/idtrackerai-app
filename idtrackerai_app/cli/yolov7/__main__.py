@@ -14,6 +14,7 @@ logging.getLogger("idtrackerai.list_of_blobs.modifiable").setLevel(logging.DEBUG
 
 import torch
 from idtrackerai.animals_detection.yolov7 import annotate_chunk_with_yolov7, yolov7_repo
+from idtrackerai.list_of_blobs import ListOfBlobs
 
 from .utils import validate_store
 
@@ -39,27 +40,32 @@ def main():
     integrate_yolov7(store_path=args.store_path, n_jobs=args.n_jobs, input=input, output=args.output, chunks=args.chunks)
 
 
-def integrate_yolov7(store_path, n_jobs, input, output, chunks):
+def integrate_yolov7(store_path, session_folder, n_jobs, input, output, chunks):
     """
-    Call process_chunk in parallel
+    Call process_chunk
     See also: process_chunk
     """
 
     assert os.path.exists(input), f"{input} not found (wd: {os.getcwd()}"
     assert os.path.exists(output), f"{output} not found"
     assert os.path.isdir(output), f"{output} is not a directory"
+    assert len(chunks) == 1 # for now dont support more than 1 chunk
+    # just call this function once per chunk in parallel
 
 
     allowed_classes={0: "fly", 1: "blurry"}
     store = validate_store(store_path)
     Output = joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(process_chunk)(
-            store_path, chunk, input, output, allowed_classes=allowed_classes,
+            store_path, session_folder, chunk, input, output, allowed_classes=allowed_classes,
         )
         for chunk in chunks
     )
+    first_chunk  = Output[0]
+    list_of_blobs = first_chunk[0]
+    return list_of_blobs
 
 
-def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfile=None):
+def process_chunk(store_path, session_folder, chunk, input, output, allowed_classes=None, logfile=None):
     """
     Improve the idtrackerai preprocessing results by collecting the output of an external AI system
 
@@ -88,8 +94,6 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
 
     """
 
-    basedir = os.path.dirname(store_path)
-
     filename = f"session_{str(chunk).zfill(6)}_integration_output.txt"
     if logfile is None:
         logfile = os.path.join(output, filename)
@@ -110,7 +114,7 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
 
     if frames:
-        _, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False, save=True)
+        list_of_blobs, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, session_folder, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False)
         processed_successfully = len(successful_frames)
         success_rate=round(processed_successfully/len(frames), 3)
 
@@ -119,6 +123,9 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
         processed_successfully=0
         failed_frames = []
         successful_frames=[]
+        blobs_collection = os.path.join(f"session_{str(chunk).zfill(6)}", "preprocessing", "blobs_collection.npy")
+        assert os.path.exists(blobs_collection)
+        list_of_blobs=ListOfBlobs.load(blobs_collection)
 
     if logfile is not None:
         with open(logfile, "a") as filehandle:
@@ -126,11 +133,12 @@ def process_chunk(store_path, chunk, input, output, allowed_classes=None, logfil
             filehandle.write(f"Total frames: {len(frames)}\n")
             filehandle.write(f"Success rate: {success_rate}\n")
 
-    pkl_file = os.path.join(basedir, "idtrackerai", f"session_{str(chunk).zfill(6)}", "preprocessing", "ai.pkl")
+    pkl_file = os.path.join(f"session_{str(chunk).zfill(6)}", "integration", "ai.pkl")
+    os.makedirs(os.path.dirname(pkl_file), exist_ok=True)
     with open(pkl_file, "wb") as filehandle:
         pickle.dump({"success": successful_frames, "fail": failed_frames}, filehandle)
 
-    return chunk, success_rate
+    return list_of_blobs, chunk, success_rate
 
 if __name__ == "__main__":
      main()
