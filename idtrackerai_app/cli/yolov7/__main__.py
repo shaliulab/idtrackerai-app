@@ -62,6 +62,13 @@ def integrate_yolov7(store_path, session_folder, n_jobs, input, output, chunks):
     )
     first_chunk  = Output[0]
     list_of_blobs = first_chunk[0]
+
+    video_object = np.load(os.path.join(session_folder, "video_object.npy"), allow_pickle=True).item()
+    if len(list_of_blobs.blobs_in_video[video_object.episodes_start_end[0][0]]) == 0:
+        logging.warning("No blobs in first frame")
+    if len(list_of_blobs.blobs_in_video[video_object.episodes_start_end[-1][-1]-1]) == 0:
+        logging.warning("No blobs in last frame")
+
     return list_of_blobs
 
 
@@ -112,7 +119,6 @@ def process_chunk(store_path, session_folder, chunk, input, output, allowed_clas
     ]
 
     logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
-
     if frames:
         list_of_blobs, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, session_folder, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False)
         processed_successfully = len(successful_frames)
@@ -123,7 +129,7 @@ def process_chunk(store_path, session_folder, chunk, input, output, allowed_clas
         processed_successfully=0
         failed_frames = []
         successful_frames=[]
-        blobs_collection = os.path.join(f"session_{str(chunk).zfill(6)}", "preprocessing", "blobs_collection.npy")
+        blobs_collection = os.path.join(session_folder, "preprocessing", "blobs_collection.npy")
         assert os.path.exists(blobs_collection)
         list_of_blobs=ListOfBlobs.load(blobs_collection)
 
