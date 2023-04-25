@@ -55,13 +55,16 @@ def integrate_yolov7(store_path, session_folder, n_jobs, input, output, chunks):
 
     allowed_classes={0: "fly", 1: "blurry"}
     store = validate_store(store_path)
-    Output = joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(process_chunk)(
+    Output = joblib.Parallel(n_jobs=1)(joblib.delayed(process_chunk)(
             store_path, session_folder, chunk, input, output, allowed_classes=allowed_classes,
         )
         for chunk in chunks
     )
     first_chunk  = Output[0]
     list_of_blobs = first_chunk[0]
+
+    # recompute overlapping
+    list_of_blobs.compute_overlapping_between_subsequent_frames(n_jobs=n_jobs)
 
     video_object = np.load(os.path.join(session_folder, "video_object.npy"), allow_pickle=True).item()
     if len(list_of_blobs.blobs_in_video[video_object.episodes_start_end[0][0]]) == 0:

@@ -284,7 +284,7 @@ class BaseIdTrackerAi(
         self.list_of_blobs = integrate_yolov7(
             store_path=os.path.realpath(self.video_path),
             session_folder = self.video_object.session_folder,
-            n_jobs=conf.NUMBER_OF_JOBS_FOR_INTEGRATION,
+            n_jobs=conf.NUMBER_OF_JOBS_FOR_CONNECTING_BLOBS,
             chunks=[int(self._session.value)],
             input=conf.AI_LABELS_FOLDER,
             output=".",
