@@ -40,7 +40,12 @@ def process_chunk(store_path, chunk):
 
     video_object_path = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk).zfill(6)}", "video_object.npy")
     list_of_blobs_path = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk).zfill(6)}", input_step, "blobs_collection.npy")
+    if not os.path.exists(list_of_blobs_path):
+        list_of_blobs_path = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk).zfill(6)}", "preprocessing", "blobs_collection.npy")
+    
     list_of_blobs_path_next = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk+1).zfill(6)}", input_step, "blobs_collection.npy")
+    if not os.path.exists(list_of_blobs_path_next):
+        list_of_blobs_path_next = os.path.join(os.path.dirname(store_path), "idtrackerai", f"session_{str(chunk+1).zfill(6)}", "preprocessing", "blobs_collection.npy")
 
 
     pattern=[]
