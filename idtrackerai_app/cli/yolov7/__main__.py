@@ -115,8 +115,8 @@ def process_chunk(store_path, session_folder, chunk, input, output, allowed_clas
     regex=os.path.join(input, f"*_{chunk}-*.txt")
     labels = sorted(glob.glob(regex))
     frames = [(
-            int(os.path.basename(label).split("_")[0]),
-            int(os.path.splitext(os.path.basename(label))[0].split("_")[1].split("-")[1])
+            int(os.path.basename(label).split("_")[0]), # chunk
+            int(os.path.splitext(os.path.basename(label))[0].split("_")[1].split("-")[1]) # frame number
         )
         for label in labels
     ]
