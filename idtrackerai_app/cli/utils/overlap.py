@@ -2,8 +2,8 @@ import argparse
 import os.path
 import itertools
 import warnings
-import re
 import logging
+
 import numpy as np
 import pandas as pd
 import joblib
@@ -140,9 +140,12 @@ def compute_identity_table(store_path, chunks, n_jobs=1):
 
 def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50, strict=True):
     basedir = os.path.dirname(store_path)
-    csv_file=os.path.join(basedir, "idtrackerai", "concatenation-overlap.csv")
-
-    number_of_animals=int(re.search("FlyHostel[0-9]/([0-9]*)X/", store_path).group(1))
+    idtrackerai_folder = os.path.join(basedir, "idtrackerai")
+    csv_file=os.path.join(idtrackerai_folder, "concatenation-overlap.csv")
+    vo_path=os.path.join(idtrackerai_folder, f"session_{str(chunks[0]).zfill(6)}", "video_object.npy")
+    assert os.path.exists(vo_path)
+    video_object=np.load(vo_path, allow_pickle=True).item()
+    number_of_animals=video_object.user_defined_parameters["number_of_animals"]
     identity_table=compute_identity_table(store_path, chunks, n_jobs=n_jobs)
 
     chunks=sorted(list(set(identity_table["chunk"].values.tolist())))
