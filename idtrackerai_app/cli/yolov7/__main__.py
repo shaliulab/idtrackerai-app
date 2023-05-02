@@ -63,7 +63,8 @@ def integrate_yolov7(store_path, session_folder, n_jobs, input, output, chunks):
     first_chunk  = Output[0]
     list_of_blobs = first_chunk[0]
 
-    # recompute overlapping
+    # recompute overlapping, even remove the cache i.e. forget everything
+    list_of_blobs.disconnect(cache=True)
     list_of_blobs.compute_overlapping_between_subsequent_frames(n_jobs=n_jobs)
 
     video_object = np.load(os.path.join(session_folder, "video_object.npy"), allow_pickle=True).item()

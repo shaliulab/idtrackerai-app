@@ -61,7 +61,6 @@ def process_chunk(store_path, chunk):
         frame_after=list_of_blobs_next.blobs_in_video[frame_number]
 
         overlap_pattern=compute_overlapping_between_two_subsequent_frames(frame_before, frame_after, queue=None, do=False)
-
         identities = []
 
         for ((fn, i), (fnp1, j)) in overlap_pattern:
@@ -91,6 +90,8 @@ def process_chunk(store_path, chunk):
 
     else:
         print(f"Cannot compute overlap between chunks {chunk} and {chunk+1} for experiment {store_path}")
+
+    print(chunk, pattern)
     return pattern
 
 
@@ -143,7 +144,7 @@ def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50, strict=True):
     idtrackerai_folder = os.path.join(basedir, "idtrackerai")
     csv_file=os.path.join(idtrackerai_folder, "concatenation-overlap.csv")
     vo_path=os.path.join(idtrackerai_folder, f"session_{str(chunks[0]).zfill(6)}", "video_object.npy")
-    assert os.path.exists(vo_path)
+    assert os.path.exists(vo_path), f"{vo_path} not found"
     video_object=np.load(vo_path, allow_pickle=True).item()
     number_of_animals=video_object.user_defined_parameters["number_of_animals"]
     identity_table=compute_identity_table(store_path, chunks, n_jobs=n_jobs)

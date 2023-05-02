@@ -611,6 +611,8 @@ class BaseIdTrackerAi(
 
         animals_detector.remove_frames(conf.IMPERFECT_FRAMES_FOLDER, self.video_object._chunk)
         animals_detector.save_incomplete_frames(conf.IMPERFECT_FRAMES_FOLDER)
+        print(f"{conf.IMPERFECT_FRAMES_FOLDER} mkdir")
+        os.makedirs(conf.IMPERFECT_FRAMES_FOLDER, exist_ok=True)
 
         for frame_number in self.video_object.frames_with_more_blobs_than_animals:
             print(f"PROBLEM:Too many blobs:{frame_number}")
