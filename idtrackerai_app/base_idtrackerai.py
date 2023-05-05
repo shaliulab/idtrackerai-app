@@ -3,6 +3,7 @@ import time
 import warnings
 from confapp import conf
 import sys
+import math
 
 from pyforms.basewidget import BaseWidget
 from pyforms.controls import ControlText
@@ -480,14 +481,16 @@ class BaseIdTrackerAi(
         self.video_object.create_session_folder(self._session.value)
 
     def __get_tracking_interval(self):
-        if self._multiple_range.value and self._rangelst.value:
-            try:
-                self._tracking_interval = eval(self._rangelst.value)
-            except Exception as e:
-                logger.fatal(e, exc_info=True)
-                self._tracking_interval = [self._range.value]
-        else:
-            self._tracking_interval = [self._range.value]
+        # if self._multiple_range.value and self._rangelst.value:
+        #     try:
+        #         self._tracking_interval = eval(self._rangelst.value)
+        #     except Exception as e:
+        #         logger.fatal(e, exc_info=True)
+        #         self._tracking_interval = [self._range.value]
+        # else:
+        #     self._tracking_interval = [self._range.value]
+
+        self._tracking_interval = [0, math.inf]
 
     def __get_bkg_model(self):
         if self._bgsub.value:
