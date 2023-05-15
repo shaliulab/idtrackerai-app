@@ -153,7 +153,6 @@ def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cac
         with open(metadata_path, "r") as filehandle:
             extension = yaml.load(filehandle, yaml.SafeLoader)["__store"]["extension"]
     except Exception as error:
-        print(os.getcwd())
         raise error
 
     # symlink the config file to idtrackerai too

@@ -490,7 +490,7 @@ class BaseIdTrackerAi(
         # else:
         #     self._tracking_interval = [self._range.value]
 
-        self._tracking_interval = [0, math.inf]
+        self._tracking_interval = [[0, math.inf]]
 
     def __get_bkg_model(self):
         if self._bgsub.value:
