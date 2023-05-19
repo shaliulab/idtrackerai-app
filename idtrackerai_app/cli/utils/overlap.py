@@ -292,10 +292,19 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
 
             if not strict and chunk != chunks[-1]:
                 current_chunk = identity_table.loc[(identity_table["chunk"] == chunk),]
-                if current_chunk.shape[0] != number_of_animals:
-                    found_lids, target_lids, missing_lids = feature_stats(identity_table, chunk, "local_identity", number_of_animals)
-                    found_ids, target_ids, missing_ids = feature_stats(identity_table, chunk, "identity", number_of_animals)
-                    found_lidas, target_lidas, missing_lidas = feature_stats(identity_table, chunk, "local_identity_after", number_of_animals)
+                found_lids, target_lids, missing_lids = feature_stats(identity_table, chunk, "local_identity", number_of_animals)
+                found_ids, target_ids, missing_ids = feature_stats(identity_table, chunk, "identity", number_of_animals)
+                found_lidas, target_lidas, missing_lidas = feature_stats(identity_table, chunk, "local_identity_after", number_of_animals)
+                if current_chunk.shape[0] == number_of_animals and len(missing_lids)>0:
+                    for i, (missing_local_identity, missing_identity) in enumerate(zip(missing_lids, missing_ids)):
+                        current_chunk.loc[current_chunk["local_identity"].isin([None, 0]), "identity"]=missing_identity
+                        current_chunk.loc[current_chunk["local_identity"].isin([None, 0]), "local_identity"]=missing_local_identity
+                    
+                    identity_table=identity_table.loc[identity_table["chunk"] != chunk,]
+                    identity_table=pd.concat([identity_table, current_chunk])
+
+                else:
+
                     warnings.warn("Missing ids: {missing_ids} in chunk {chunk}")
                     for missing_local_identity, missing_identity, missing_local_identity_after in zip(missing_lids, missing_ids, missing_lidas):
                         template = identity_table.iloc[0].copy()
