@@ -2,7 +2,7 @@ import os, subprocess, cv2, numpy as np, sys
 import glob, json
 from confapp import conf
 
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication
 from AnyQt.QtWidgets import QMessageBox
 from scipy import ndimage  # TODO: used to fill binary holes see below
 
