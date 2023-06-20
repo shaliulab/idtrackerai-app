@@ -107,7 +107,7 @@ def main():
 
     print(f"Strict policy: {args.strict}")
 
-    process_all_chunks(args.store_path, chunks, n_jobs=args.n_jobs, strict=args.strict)
+    process_all_chunks(args.store_path, chunks, ref_chunk=sorted(chunks)[0], n_jobs=args.n_jobs, strict=args.strict)
 
 
 
