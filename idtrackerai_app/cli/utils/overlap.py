@@ -170,8 +170,10 @@ def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, lo
 
     If more than 1 blob with local identity 0 is found in the present chunk, strict has no effect, which means the returned identity will be 0
 
-    is_inferred: Whether at least one of the local identities of this track in any past chunk was 0
-    is_broken: Whether an identity in the immediately past chunk can be matched (is_broken=False) or not (is_broken=True)
+    is_inferred: Whether at least one of the local identities of this track in any past chunk was 0. A human intervention is needed at some point in the past,
+    but not necessarily here.
+    is_broken: Whether an identity in the immediately past chunk can be matched (is_broken=False) or not (is_broken=True).
+    This is where human intervention is needed.
     """
     assert local_identity != 0
 
@@ -283,19 +285,45 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                 else:
                     # get the identity of the blob in the previous chunk that overlapped with a blob in this chunk with the current identity
                     # i.e. the current blob
-                    identity, is_inferred, is_broken=get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, local_identity, strict=strict)
-
+                    identity, is_inferred, is_broken=get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, local_identity, strict=strict)                  
                     # assign to the current blob that identity
                     identity_table.loc[indexer, "identity"] = identity
                     identity_table.loc[indexer, "is_inferred"] = is_inferred
                     identity_table.loc[indexer, "is_broken"] = is_broken
 
+
             if not strict and chunk != chunks[-1]:
                 current_chunk = identity_table.loc[(identity_table["chunk"] == chunk),]
-                if current_chunk.shape[0] != number_of_animals:
-                    found_lids, target_lids, missing_lids = feature_stats(identity_table, chunk, "local_identity", number_of_animals)
-                    found_ids, target_ids, missing_ids = feature_stats(identity_table, chunk, "identity", number_of_animals)
-                    found_lidas, target_lidas, missing_lidas = feature_stats(identity_table, chunk, "local_identity_after", number_of_animals)
+                found_lids, target_lids, missing_lids = feature_stats(identity_table, chunk, "local_identity", number_of_animals)
+                found_ids, target_ids, missing_ids = feature_stats(identity_table, chunk, "identity", number_of_animals)
+                found_lidas, target_lidas, missing_lidas = feature_stats(identity_table, chunk-1, "local_identity_after", number_of_animals)
+                if current_chunk.shape[0] == number_of_animals and len(missing_lids)>0:
+                    for i, (missing_local_identity, missing_identity) in enumerate(zip(missing_lids, missing_ids)):
+                        truth_table=current_chunk["local_identity"].isin([None, 0])
+                        truth_table=truth_table[truth_table]
+                        indexer=truth_table.index[0]
+                        current_chunk.loc[indexer, "is_inferred"]=True
+                        current_chunk.loc[indexer, "is_broken"]=True
+                        current_chunk.loc[indexer, "identity"]=missing_identity
+                        current_chunk.loc[indexer, "local_identity"]=missing_local_identity
+                    
+                    identity_table=identity_table.loc[identity_table["chunk"] != chunk,]
+                    identity_table=pd.concat([identity_table, current_chunk])
+                
+                elif current_chunk.shape[0] == number_of_animals and len(missing_lidas)>0:
+                    for i, (missing_local_identity_after, missing_identity) in enumerate(zip(missing_lidas, missing_ids)):
+                        truth_table=current_chunk["identity"].isin([None, 0])
+                        truth_table=truth_table[truth_table]
+                        indexer=truth_table.index[0]
+                        current_chunk.loc[indexer, "is_inferred"]=True
+                        current_chunk.loc[indexer, "is_broken"]=True
+                        current_chunk.loc[indexer, "identity"]=missing_identity
+
+                    identity_table=identity_table.loc[identity_table["chunk"] != chunk,]
+                    identity_table=pd.concat([identity_table, current_chunk])
+
+                else:
+
                     warnings.warn("Missing ids: {missing_ids} in chunk {chunk}")
                     for missing_local_identity, missing_identity, missing_local_identity_after in zip(missing_lids, missing_ids, missing_lidas):
                         template = identity_table.iloc[0].copy()
