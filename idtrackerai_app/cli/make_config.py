@@ -1,3 +1,4 @@
+import argparse
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -34,19 +35,28 @@ def render_roi(image, points):
     return answer
 
 
-def write_config(points):
+def write_config(points, number_of_animals):
     points_str=str(points.tolist())[1:-1] + ","
 
     with open("idtrackerai.conf", "r") as filehandle:
         config = json.load(filehandle)
 
     config["_roi"]["value"] = [[points_str]]
+    config["_number_of_animals"]["value"] = float(number_of_animals)
 
     with open("output.conf", "w") as filehandle:
         json.dump(config, filehandle)
 
+def get_parser():
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--X", help="Number of animals", required=True)
+    return ap
 
 def main():
+    ap = get_parser()
+    args=ap.parse_args()
+
     image=cv2.imread("image.png")[:,:,0]
     count=0
     
@@ -62,7 +72,7 @@ def main():
         else:
             count+=1
 
-    write_config(points)
+    write_config(points, args.X)
 
 
 if __name__ == "__main__":
