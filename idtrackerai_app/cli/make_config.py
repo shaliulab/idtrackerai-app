@@ -23,16 +23,26 @@ def interpolate_roi(clicks):
     points = cv2.ellipse2Poly(center, axes, angle, 0, 360, 5)
     return points
 
-def render_roi(image, points):
+def render_roi(image, points, ask=True):
+    
     image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
-    print(points.shape)
     render=cv2.drawContours(image, [points], -1, 255, 3)
     plt.imshow(render)
     plt.show()
 
-    answer = input("OK?: Y/N")
+    if ask:
+        answer = input("OK?: Y/N")
+    else:
+        answer= "Y"
     plt.close()
     return answer
+
+def read_config():
+
+    with open("output.conf", "r") as filehandle:
+        config = json.load(filehandle)
+
+    return config
 
 
 def write_config(points, number_of_animals):
@@ -51,28 +61,36 @@ def get_parser():
 
     ap = argparse.ArgumentParser()
     ap.add_argument("--X", help="Number of animals", required=True)
+    ap.add_argument("--render", help="Just show contour", action="store_true", default=False)
     return ap
 
 def main():
     ap = get_parser()
     args=ap.parse_args()
 
+
     image=cv2.imread("image.png")[:,:,0]
-    count=0
-    
-    while count < 3:
-        clicks=prompt_user(image)
-        # clicks=np.load("clicks.npy")
+
+    if args.render:
+        config = read_config()
+        points = np.array(eval(config["_roi"]["value"][0][0].rstrip(",")))
+        render_roi(image, points, ask=False)
         
-        points=interpolate_roi(clicks)
-        answer = render_roi(image, points)
-
-        if answer == "Y":
-            break
-        else:
-            count+=1
-
-    write_config(points, args.X)
+    else:
+        count=0
+        while count < 3:
+            clicks=prompt_user(image)
+            # clicks=np.load("clicks.npy")
+            
+            points=interpolate_roi(clicks)
+            answer = render_roi(image, points)
+    
+            if answer == "Y":
+                break
+            else:
+                count+=1
+    
+        write_config(points, args.X)
 
 
 if __name__ == "__main__":
