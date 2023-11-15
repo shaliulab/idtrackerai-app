@@ -56,6 +56,7 @@ setup(
             "upload-blobs-to-vsc=idtrackerai_app.cli.transfer:upload_blob_collections",
             "download-blobs-from-vsc=idtrackerai_app.cli.transfer:download_blob_collections",
             "qc-identity-zero=idtrackerai_app.cli.qc:qc_identity_zero",
+            "preprocess-sample=idtrackerai_app.cli.qc.preprocess_sample:main"
         ],
     },
 )
