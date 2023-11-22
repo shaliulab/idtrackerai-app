@@ -31,7 +31,7 @@ from idtrackerai.animals_detection.segmentation_utils import apply_segmentation_
 def preprocess_sample(store_path, start_chunk, end_chunk, samples_per_chunk):
 
     last_chunk=start_chunk-1
-
+    store_path=os.path.realpath(store_path)
 
     cap = VideoCapture(store_path, 1)
     try:
