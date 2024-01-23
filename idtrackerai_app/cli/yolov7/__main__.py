@@ -53,8 +53,10 @@ def integrate_yolov7(store_path, session_folder, n_jobs, input, output, chunks):
     # just call this function once per chunk in parallel
 
 
+
     allowed_classes={0: "fly", 1: "blurry"}
     store = validate_store(store_path)
+    logger.debug("Integrating YOLOv7 inference for chunks %s", ",".join([str(chunk) for chunk in chunks]))
     Output = joblib.Parallel(n_jobs=1)(joblib.delayed(process_chunk)(
             store_path, session_folder, chunk, input, output, allowed_classes=allowed_classes,
         )
@@ -64,7 +66,9 @@ def integrate_yolov7(store_path, session_folder, n_jobs, input, output, chunks):
     list_of_blobs = first_chunk[0]
 
     # recompute overlapping, even remove the cache i.e. forget everything
+    logger.debug("Disconnecting")
     list_of_blobs.disconnect(cache=True)
+    logger.debug("Computing overlap between subsequent frames")
     list_of_blobs.compute_overlapping_between_subsequent_frames(n_jobs=n_jobs)
 
     video_object = np.load(os.path.join(session_folder, "video_object.npy"), allow_pickle=True).item()
@@ -105,13 +109,8 @@ def process_chunk(store_path, session_folder, chunk, input, output, allowed_clas
 
     """
 
-    filename = f"session_{str(chunk).zfill(6)}_integration_output.txt"
-    if logfile is None:
-        logfile = os.path.join(output, filename)
-
-    if os.path.exists(logfile):
-        os.remove(logfile)
-
+    filename = f"session_{str(chunk).zfill(6)}_integration_output_summary.txt"
+    logfile = os.path.join(output, filename)
 
     regex=os.path.join(input, f"*_{chunk}-*.txt")
     labels = sorted(glob.glob(regex))

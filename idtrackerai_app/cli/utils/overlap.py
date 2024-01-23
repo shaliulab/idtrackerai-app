@@ -53,17 +53,44 @@ def process_chunk(store_path, chunk):
         video=np.load(video_object_path, allow_pickle=True).item()
         frame_number = video.episodes_start_end[-1][-1]
 
-
-        list_of_blobs=ListOfBlobs.load(list_of_blobs_path)
-        list_of_blobs_next=ListOfBlobs.load(list_of_blobs_path_next)
+        try:
+            list_of_blobs=ListOfBlobs.load(list_of_blobs_path)
+        except Exception as error:
+            logger.error(f"Cannot load {list_of_blobs_path}")
+            raise error
+        try:
+            list_of_blobs_next=ListOfBlobs.load(list_of_blobs_path_next)
+        except Exception as error:
+            logger.error(f"Cannot load {list_of_blobs_path_next}")
+            raise error
 
         frame_before=list_of_blobs.blobs_in_video[frame_number-1]
         frame_after=list_of_blobs_next.blobs_in_video[frame_number]
 
         overlap_pattern=compute_overlapping_between_two_subsequent_frames(frame_before, frame_after, queue=None, do=False)
+
+        hits=len(overlap_pattern)
+
+        # NOTE
+        # this happens if a perfect overlap is not possible between two frames in chunk edges
+        if len(overlap_pattern) != len(frame_before):
+            available_indices = [pair[0][1] for pair in overlap_pattern]
+            target_indices = list(range(len(frame_before)))
+            not_available_indices = [index for index in target_indices if index not in available_indices]
+            blobs_previous_frame_without_connection = [(frame_number-1, i) for i in not_available_indices]
+
+            available_indices = [pair[1][1] for pair in overlap_pattern]
+            target_indices = list(range(len(frame_after)))
+            not_available_indices = [index for index in target_indices if index not in available_indices]
+            blobs_after_frame_without_connection = [(frame_number, i) for i in not_available_indices]
+
+            for blob0, blob1 in zip(blobs_previous_frame_without_connection, blobs_after_frame_without_connection):
+                overlap_pattern.append((blob0, blob1))
+
+
         identities = []
 
-        for ((fn, i), (fnp1, j)) in overlap_pattern:
+        for k, ((fn, i), (fnp1, j)) in enumerate(overlap_pattern):
             blob_before=frame_before[i]
             blob_after=frame_after[j]
             ai_identity=blob_before.identity
@@ -73,6 +100,11 @@ def process_chunk(store_path, chunk):
             identity_after=blob_after.final_identities[-1]
             ai_identity_after=blob_after.identity
             if identity_after is None:
+                identity_after=0
+            
+            # to encode the fact that the overlap pattern had to be extended artificially
+            # as explained in the NOTE above
+            if k >= hits:
                 identity_after=0
 
             pattern.append((
@@ -212,6 +244,20 @@ def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, lo
 
     return identity, is_inferred, is_broken
 
+def assign_random_identities_in_ref_chunk(identity_table, number_of_animals):
+    chunk = identity_table["chunk"].iloc[0]
+
+    found_ids, target_ids, missing_ids = feature_stats(identity_table, chunk, "identity", number_of_animals)
+    row_ids=np.where((np.bitwise_and(identity_table["chunk"] == chunk, identity_table["identity"] == 0)).values)[0]
+
+    assert len(missing_ids) == len(row_ids)
+    for i, row_id in enumerate(row_ids):
+        identity_table["identity"].iloc[row_id] = missing_ids[i]
+    
+    return identity_table
+
+
+
 def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals=None, strict=True):
     """
     Propagate the identity of the blobs in the reference chunk
@@ -263,6 +309,8 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
 
         if chunk == ref_chunk:
             identity_table.loc[current_chunk.index, "identity"]=identity_table.loc[current_chunk.index, "local_identity"]
+            identity_table=assign_random_identities_in_ref_chunk(identity_table, number_of_animals)
+
 
         else:
             for i in range(current_chunk.shape[0]):
@@ -298,14 +346,31 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                 found_ids, target_ids, missing_ids = feature_stats(identity_table, chunk, "identity", number_of_animals)
                 found_lidas, target_lidas, missing_lidas = feature_stats(identity_table, chunk-1, "local_identity_after", number_of_animals)
                 if current_chunk.shape[0] == number_of_animals and len(missing_lids)>0:
-                    for i, (missing_local_identity, missing_identity) in enumerate(zip(missing_lids, missing_ids)):
-                        truth_table=current_chunk["local_identity"].isin([None, 0])
+
+                    for i, missing_identity in enumerate(missing_ids):
+                        if i >= len(missing_lids):
+                            # keep sampling the first row (until no rows are left)
+                            missing_local_identity=current_chunk.loc[current_chunk["identity"] == 0]["local_identity"].iloc[0]
+                            truth_table=current_chunk["local_identity"].isin([missing_local_identity])
+                        else:
+                            missing_local_identity=missing_lids[i]
+                            truth_table=current_chunk["local_identity"].isin([None, 0])
+
                         truth_table=truth_table[truth_table]
                         indexer=truth_table.index[0]
                         current_chunk.loc[indexer, "is_inferred"]=True
                         current_chunk.loc[indexer, "is_broken"]=True
                         current_chunk.loc[indexer, "identity"]=missing_identity
                         current_chunk.loc[indexer, "local_identity"]=missing_local_identity
+
+                    # for i, (missing_local_identity, missing_identity) in enumerate(zip(missing_lids, missing_ids)):
+                    #     truth_table=current_chunk["local_identity"].isin([None, 0])
+                    #     truth_table=truth_table[truth_table]
+                    #     indexer=truth_table.index[0]
+                    #     current_chunk.loc[indexer, "is_inferred"]=True
+                    #     current_chunk.loc[indexer, "is_broken"]=True
+                    #     current_chunk.loc[indexer, "identity"]=missing_identity
+                    #     current_chunk.loc[indexer, "local_identity"]=missing_local_identity
                     
                     identity_table=identity_table.loc[identity_table["chunk"] != chunk,]
                     identity_table=pd.concat([identity_table, current_chunk])
