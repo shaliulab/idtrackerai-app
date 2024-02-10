@@ -677,7 +677,7 @@ class BaseIdTrackerAi(
 
             else:
                 tracker.track_multiple_animals()
-                self.list_of_fragments.update_identification_images_dataset()
+                # self.list_of_fragments.update_identification_images_dataset()
 
             if self.video_object.estimated_accuracy is None:
                 self.video_object.compute_estimated_accuracy()

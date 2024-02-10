@@ -34,7 +34,7 @@ def main():
     
 
     if command == "preprocessing" and (reconnect_blobs_from_cache is None or reconnect_blobs_from_cache is True):
-        logger.warning(f"Detected reconnect_blobs_from_cache is set to {reconnect_blobs_from_cache}. This is forbidden for command {command}, only False is allowed. I will set it to False")
+        logger.info(f"Detected reconnect_blobs_from_cache is set to {reconnect_blobs_from_cache}. This is forbidden for command {command}, only False is allowed. I will set it to False")
         reconnect_blobs_from_cache = False
 
     session, cwd = prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cache, skip_saving_identification_images, skip_every_frame=skip_every_frame, wait_for=wait_for)
