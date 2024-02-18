@@ -18,9 +18,9 @@ setup(
     url="https://idtrackerai-app.readthedocs.org",
     packages=find_packages(),
     install_requires=[
-        "rich",
-        "pyforms-terminal==4.*",
-        "imgstore-shaliulab>=0.4.9",
+        #"rich",
+        #"pyforms-terminal==4.*",
+        #"imgstore-shaliulab>=0.4.9",
     ],
     extras_require={
         "gui": [
