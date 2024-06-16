@@ -257,6 +257,13 @@ def assign_random_identities_in_ref_chunk(identity_table, number_of_animals):
     return identity_table
 
 
+def identity_is_already_assigned(identity_table, chunk, identity):
+    hits=identity_table.loc[
+        (identity_table["chunk"]==chunk) & \
+        (identity_table["identity"]==identity) 
+    ].shape[0]
+    return hits>0
+
 
 def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals=None, strict=True):
     """
@@ -301,8 +308,7 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
     if len(ignored_chunks) != 0:
         warnings.warn(f"Ignoring chunks {ignored_chunks}")
 
-    chunks = chunks[chunks.index(ref_chunk):]
-
+    chunks = chunks[chunks.index(ref_chunk):]        
     for chunk in tqdm(chunks, desc="Propagating identities", unit="chunk"):
         logger.debug(f"Propagating identities for chunk {chunk}")
         current_chunk=identity_table.loc[identity_table["chunk"] == chunk]
@@ -310,7 +316,6 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
         if chunk == ref_chunk:
             identity_table.loc[current_chunk.index, "identity"]=identity_table.loc[current_chunk.index, "local_identity"]
             identity_table=assign_random_identities_in_ref_chunk(identity_table, number_of_animals)
-
 
         else:
             for i in range(current_chunk.shape[0]):
@@ -335,6 +340,10 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                     # i.e. the current blob
                     identity, is_inferred, is_broken=get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, local_identity, strict=strict)                  
                     # assign to the current blob that identity
+                    if identity_is_already_assigned(identity_table, chunk, identity):
+                        identity=0
+                        is_inferred=True
+                        is_broken=True
                     identity_table.loc[indexer, "identity"] = identity
                     identity_table.loc[indexer, "is_inferred"] = is_inferred
                     identity_table.loc[indexer, "is_broken"] = is_broken
@@ -350,7 +359,11 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                     for i, missing_identity in enumerate(missing_ids):
                         if i >= len(missing_lids):
                             # keep sampling the first row (until no rows are left)
-                            missing_local_identity=current_chunk.loc[current_chunk["identity"] == 0]["local_identity"].iloc[0]
+                            try:
+                                missing_local_identity=current_chunk.loc[current_chunk["identity"] == 0]["local_identity"].iloc[0]
+                            except IndexError as error:
+                                logger.error("Cannot process chunk %s", chunk)
+                                raise error
                             truth_table=current_chunk["local_identity"].isin([missing_local_identity])
                         else:
                             missing_local_identity=missing_lids[i]
@@ -362,16 +375,6 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                         current_chunk.loc[indexer, "is_broken"]=True
                         current_chunk.loc[indexer, "identity"]=missing_identity
                         current_chunk.loc[indexer, "local_identity"]=missing_local_identity
-
-                    # for i, (missing_local_identity, missing_identity) in enumerate(zip(missing_lids, missing_ids)):
-                    #     truth_table=current_chunk["local_identity"].isin([None, 0])
-                    #     truth_table=truth_table[truth_table]
-                    #     indexer=truth_table.index[0]
-                    #     current_chunk.loc[indexer, "is_inferred"]=True
-                    #     current_chunk.loc[indexer, "is_broken"]=True
-                    #     current_chunk.loc[indexer, "identity"]=missing_identity
-                    #     current_chunk.loc[indexer, "local_identity"]=missing_local_identity
-                    
                     identity_table=identity_table.loc[identity_table["chunk"] != chunk,]
                     identity_table=pd.concat([identity_table, current_chunk])
                 
@@ -388,8 +391,7 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                     identity_table=pd.concat([identity_table, current_chunk])
 
                 else:
-
-                    warnings.warn("Missing ids: {missing_ids} in chunk {chunk}")
+                    logger.warning("Missing ids: %s in chunk %s", missing_ids, chunk)
                     for missing_local_identity, missing_identity, missing_local_identity_after in zip(missing_lids, missing_ids, missing_lidas):
                         template = identity_table.iloc[0].copy()
                         template["chunk"]=chunk
