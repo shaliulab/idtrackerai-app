@@ -281,6 +281,7 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(True)
 
     def integration(self):
+        integration_start=time.time()
         self.load(step="preprocessing")
         self.list_of_blobs = integrate_yolov7(
             store_path=os.path.realpath(self.video_path),
@@ -292,6 +293,8 @@ class BaseIdTrackerAi(
         )
         self.save(step="integration")
         self.save_success_file("integration")
+        integration_end=time.time()
+        logger.info(f"DONE integration in {integration_end - integration_start} seconds")
         
 
     def save_success_file(self, step):
