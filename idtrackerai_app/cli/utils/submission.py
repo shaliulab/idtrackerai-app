@@ -15,10 +15,11 @@ from idtrackerai.constants import ANALYSIS_FOLDER
 
 logger = logging.getLogger(__name__)
 
-
+logger.setLevel(logging.DEBUG)
 
 def write_shell_script(path, lines):
 
+    logger.debug(path)
     with open(path, "w") as filehandle:
         filehandle.write("#! /bin/bash\n")
         for line in lines:
@@ -26,6 +27,8 @@ def write_shell_script(path, lines):
             filehandle.write("\n")
         # filehandle.write("echo 'Hello World'")
         filehandle.write("\n")
+    logger.debug(path)
+    assert os.path.exists(path)
     os.chmod(path, stat.S_IRWXU)
     return os.path.exists(path)
 
@@ -47,10 +50,10 @@ def make_session_script(
     )
 
     cmd = f"cd {ANALYSIS_FOLDER} && idtrackerai terminal_mode --_session {chunk_pad}  --load  {config_file} --exec {command}"
-
     label = f"{chunk}_{command}"
 
     write_shell_script(session_script, [*before, cmd])  
+    assert os.path.exists(session_script), f"{session_script} creation failed!"
     return session_script, output_file, label, wait_for, command
 
 

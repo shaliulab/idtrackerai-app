@@ -281,6 +281,7 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(True)
 
     def integration(self):
+        integration_start=time.time()
         self.load(step="preprocessing")
         self.list_of_blobs = integrate_yolov7(
             store_path=os.path.realpath(self.video_path),
@@ -292,6 +293,8 @@ class BaseIdTrackerAi(
         )
         self.save(step="integration")
         self.save_success_file("integration")
+        integration_end=time.time()
+        logger.info(f"DONE integration in {integration_end - integration_start} seconds")
         
 
     def save_success_file(self, step):
@@ -300,6 +303,47 @@ class BaseIdTrackerAi(
         path = os.path.join(folder, f"session_{str(self._session.value).zfill(6)}_{step}.txt")
         with open(path, "w") as filehandle:
             filehandle.write("DONE\n")
+
+    def preprocessing_mini(self):
+        """
+        Segment the input video and produce
+
+        * list_of_blobs
+        * list_of_fragments
+        * list_of_global_fragments
+        """
+
+        preprocessing_start = time.time()
+        self._step0_init_video_object()
+
+        try:
+            # Init tracking manager
+            self._step1_get_user_defined_parameters()
+            # Preprocessing
+            # success will be False if there are more blobs than animals and
+            # the user asked to check the segmentation consistency
+            success = self._step2_preprocessing_segmentation_mini()
+            self.save_success_file("preprocessing")
+            return success
+
+        except Exception as error:
+            logger.error(error, exc_info=True)
+            self.critical(str(error), "Error")
+            try:
+                self.save(step="preprocessing")
+            except:
+                pass
+            raise error
+
+        finally:
+            try:
+                self.save(step="preprocessing")
+                preprocessing_end = time.time()
+                logger.info(f"DONE preprocessing in {preprocessing_end - preprocessing_start} seconds")
+            except Exception as error:
+                warnings.warn("Could not save data. All preprocessing is lost")
+                warnings.warn(error, stacklevel=2)
+
 
 
     def preprocessing(self):
@@ -596,6 +640,11 @@ class BaseIdTrackerAi(
         return self._step2_preprocessing_crossings_detection_and_fragmentation()
 
 
+    def _step2_preprocessing_segmentation_mini(self):
+        animals_detector = AnimalsDetectionAPI(self.video_object)
+        self.list_of_blobs = animals_detector()
+        return True
+
     def _step2_preprocessing_segmentation(self):
 
         logger.info("START: ANIMAL DETECTION")
@@ -625,9 +674,6 @@ class BaseIdTrackerAi(
 
         for frame_number in self.video_object.frames_with_imperfect_overlap:
             print(f"PROBLEM:Imperfect overlap:{frame_number}")
-
-
-
 
         self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
@@ -677,7 +723,7 @@ class BaseIdTrackerAi(
 
             else:
                 tracker.track_multiple_animals()
-                self.list_of_fragments.update_identification_images_dataset()
+                # self.list_of_fragments.update_identification_images_dataset()
 
             if self.video_object.estimated_accuracy is None:
                 self.video_object.compute_estimated_accuracy()
