@@ -56,7 +56,7 @@ def preprocess_sample(store_path, start_chunk, end_chunk, samples_per_chunk):
         for frame_number in frame_numbers:
             chunk = frame_number // chunksize
             if last_chunk != chunk:
-                print(f"Chunk {chunk}: {problematic_frames}")
+                print(f"Chunk {chunk-1}: {problematic_frames}")
                 total_count+=len(problematic_frames)
                 problematic_frames.clear()
                 last_chunk=chunk
@@ -67,7 +67,7 @@ def preprocess_sample(store_path, start_chunk, end_chunk, samples_per_chunk):
             assert ret
             found_animals=count_animals_in_frame(frame, config)
             if found_animals!=number_of_animals:
-                problematic_frames.append(frame_number)
+                problematic_frames.append((frame_number, frame_number%chunksize, found_animals))
 
         print(f"Total problematic frames = {total_count}")
 

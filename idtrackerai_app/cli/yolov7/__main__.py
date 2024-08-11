@@ -122,7 +122,7 @@ def process_chunk(store_path, session_folder, chunk, input, output, allowed_clas
         for label in labels
     ]
 
-    logger.debug(f"Processing {len(frames)} for {store_path} chunk {chunk}")
+    logger.debug(f"Processing {len(frames)} frames for {store_path} chunk {chunk}")
     if frames:
         list_of_blobs, successful_frames, failed_frames  = annotate_chunk_with_yolov7(store_path, session_folder, chunk, frames, input, allowed_classes=allowed_classes, exclusive=False)
         processed_successfully = len(successful_frames)

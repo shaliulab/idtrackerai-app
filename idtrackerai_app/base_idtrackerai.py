@@ -611,7 +611,6 @@ class BaseIdTrackerAi(
             self.__output_segmentation_consistency_warning(outfile_path)
             return False  # This will make the tracking finish
 
-
         animals_detector.remove_frames(conf.IMPERFECT_FRAMES_FOLDER, self.video_object._chunk)
         animals_detector.save_incomplete_frames(conf.IMPERFECT_FRAMES_FOLDER)
         print(f"{conf.IMPERFECT_FRAMES_FOLDER} mkdir")
@@ -625,9 +624,6 @@ class BaseIdTrackerAi(
 
         for frame_number in self.video_object.frames_with_imperfect_overlap:
             print(f"PROBLEM:Imperfect overlap:{frame_number}")
-
-
-
 
         self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
@@ -699,7 +695,7 @@ class BaseIdTrackerAi(
         self._progress.value = 4
         return True
 
-    def __update_progress(self, value, label=None, total=None):
+    def update_progress(self, value, label=None, total=None):
 
         if total is not None:
             self._progress.max = total
