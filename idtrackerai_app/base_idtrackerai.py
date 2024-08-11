@@ -304,6 +304,47 @@ class BaseIdTrackerAi(
         with open(path, "w") as filehandle:
             filehandle.write("DONE\n")
 
+    def preprocessing_mini(self):
+        """
+        Segment the input video and produce
+
+        * list_of_blobs
+        * list_of_fragments
+        * list_of_global_fragments
+        """
+
+        preprocessing_start = time.time()
+        self._step0_init_video_object()
+
+        try:
+            # Init tracking manager
+            self._step1_get_user_defined_parameters()
+            # Preprocessing
+            # success will be False if there are more blobs than animals and
+            # the user asked to check the segmentation consistency
+            success = self._step2_preprocessing_segmentation_mini()
+            self.save_success_file("preprocessing")
+            return success
+
+        except Exception as error:
+            logger.error(error, exc_info=True)
+            self.critical(str(error), "Error")
+            try:
+                self.save(step="preprocessing")
+            except:
+                pass
+            raise error
+
+        finally:
+            try:
+                self.save(step="preprocessing")
+                preprocessing_end = time.time()
+                logger.info(f"DONE preprocessing in {preprocessing_end - preprocessing_start} seconds")
+            except Exception as error:
+                warnings.warn("Could not save data. All preprocessing is lost")
+                warnings.warn(error, stacklevel=2)
+
+
 
     def preprocessing(self):
         """
@@ -599,6 +640,11 @@ class BaseIdTrackerAi(
         return self._step2_preprocessing_crossings_detection_and_fragmentation()
 
 
+    def _step2_preprocessing_segmentation_mini(self):
+        animals_detector = AnimalsDetectionAPI(self.video_object)
+        self.list_of_blobs = animals_detector()
+        return True
+
     def _step2_preprocessing_segmentation(self):
 
         logger.info("START: ANIMAL DETECTION")
@@ -628,9 +674,6 @@ class BaseIdTrackerAi(
 
         for frame_number in self.video_object.frames_with_imperfect_overlap:
             print(f"PROBLEM:Imperfect overlap:{frame_number}")
-
-
-
 
         self._progress.value = 1
         logger.info("FINISH: ANIMAL DETECTION")
