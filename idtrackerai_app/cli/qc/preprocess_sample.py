@@ -22,6 +22,7 @@ import os.path
 import argparse
 import json
 import numpy as np
+import pandas as pd
 
 from imgstore.interface import VideoCapture
 from idtrackerai.utils.utils import load_mask_img
@@ -56,8 +57,8 @@ def preprocess_sample(store_path, start_chunk, end_chunk, samples_per_chunk):
         for frame_number in frame_numbers:
             chunk = frame_number // chunksize
             if last_chunk != chunk:
-                print(f"Chunk {chunk-1}: {problematic_frames}")
-                total_count+=len(problematic_frames)
+                total_count+=visualize_problems(problematic_frames)
+                # print(f"Chunk {chunk-1}: {problematic_frames}")
                 problematic_frames.clear()
                 last_chunk=chunk
 
@@ -65,15 +66,48 @@ def preprocess_sample(store_path, start_chunk, end_chunk, samples_per_chunk):
             ret, frame = cap.read()
             frame=frame[:,:,0]
             assert ret
-            found_animals=count_animals_in_frame(frame, config)
+
+            (
+                _,
+                contours,
+            ) = apply_segmentation_criteria(
+                frame,
+                config,
+            )
+            found_animals=len(contours)
+            # found_animals=count_animals_in_frame(frame, config)
+
             if found_animals!=number_of_animals:
-                problematic_frames.append((frame_number, frame_number%chunksize, found_animals))
+                # import ipdb; ipdb.set_trace()
+                centroids=[contour.mean(axis=0).flatten() for contour in contours]
+                for centroid in centroids:
+                    problematic_frames.append(
+                        (
+                            frame_number, frame_number//chunksize,
+                            str(frame_number//chunksize).zfill(6) + ".mp4", 
+                            frame_number%chunksize, found_animals,
+                            *centroid
+                        )
+                    )
 
         print(f"Total problematic frames = {total_count}")
 
 
     finally:
         cap.release()
+
+def visualize_problems(records):
+
+    df=pd.DataFrame.from_records(records, columns=[
+        "frame_number", "chunk", "video", "frame_idx", "n", "x", "y"
+    ])
+    
+    if df.shape[0]>0:
+        print(df)
+    count=len(df["frame_number"].unique())
+    return count
+
+
 
 
 def count_animals_in_frame(frame, parameters):
