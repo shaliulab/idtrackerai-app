@@ -3,6 +3,7 @@ import os.path
 import itertools
 import warnings
 import logging
+import _pickle as pickle
 
 import numpy as np
 import pandas as pd
@@ -54,8 +55,18 @@ def process_chunk(store_path, chunk):
         frame_number = video.episodes_start_end[-1][-1]
 
 
-        list_of_blobs=ListOfBlobs.load(list_of_blobs_path)
-        list_of_blobs_next=ListOfBlobs.load(list_of_blobs_path_next)
+        try:
+            list_of_blobs=ListOfBlobs.load(list_of_blobs_path)
+        except (pickle.UnpicklingError, EOFError) as error:
+            logger.error("Cannot load %s", list_of_blobs_path)
+            return None
+
+        try:
+            list_of_blobs_next=ListOfBlobs.load(list_of_blobs_path_next)
+        except (pickle.UnpicklingError, EOFError) as error:
+            logger.error("Cannot load %s", list_of_blobs_path_next)
+            return None
+
 
         frame_before=list_of_blobs.blobs_in_video[frame_number-1]
         frame_after=list_of_blobs_next.blobs_in_video[frame_number]
@@ -116,15 +127,23 @@ def compute_identity_table(store_path, chunks, n_jobs=1):
     temp_csv_file=os.path.join(basedir, "idtrackerai", "temp_concatenation-overlap.csv")
 
 
-    overlap_pattern = joblib.Parallel(n_jobs=n_jobs)(joblib.delayed(process_chunk)(
-        store_path, chunk
-    )
+    overlap_pattern = joblib.Parallel(
+        n_jobs=n_jobs
+    )(
+        joblib.delayed(process_chunk)(
+            store_path, chunk
+        )
         for chunk in chunks
     )
+    
+    for e in overlap_pattern:
+        if e is None:
+            raise Exception("There were errors connecting chunks. See error messages above")
 
     records=itertools.chain(*overlap_pattern)
     identity_table=pd.DataFrame.from_records(records)
     identity_table.columns=["chunk", "in_frame_index_before", "in_frame_index_after", "ai_identity","ai_identity_after", "local_identity", "local_identity_after"]
+    identity_table.insert(1, "chunk_after", identity_table["chunk"]+1)
     identity_table.to_csv(temp_csv_file)
 
 
@@ -161,7 +180,7 @@ def process_all_chunks(store_path, chunks, n_jobs=1, ref_chunk=50, strict=True):
 
 
 
-def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, local_identity, strict=True):
+def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, previous_chunk, local_identity, strict=True):
     """
     Returns the cross-chunk identity of the blob in the previous chunk that overlaps with a blob in the present chunk
     If a past blob that overlaps with the passed local_identity is not found, and strict is False, the function assumes
@@ -180,7 +199,7 @@ def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, lo
     #    2) which overlaps with a blob in this chunk with the local identity of this chunk i.e. this blob
     # = that of the blob in the previous chunk which overlaps with this chunk
 
-    identity=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "identity"]
+    identity=identity_table.loc[(identity_table["chunk"] == previous_chunk) & (identity_table["local_identity_after"] == local_identity), "identity"]
 
     if len(identity) == 0:
         is_broken=True
@@ -189,7 +208,7 @@ def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, lo
             is_inferred=False
 
         else:
-            identity = identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == 0), "identity"]
+            identity = identity_table.loc[(identity_table["chunk"] == previous_chunk) & (identity_table["local_identity_after"] == 0), "identity"]
             is_inferred=True
             if len(identity) == 1:
                 identity = identity.item()
@@ -206,7 +225,7 @@ def get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, lo
     else:
         is_broken=False
         identity=identity.item()
-        is_inferred=identity_table.loc[(identity_table["chunk"] == chunk-1) & (identity_table["local_identity_after"] == local_identity), "is_inferred"].item()
+        is_inferred=identity_table.loc[(identity_table["chunk"] == previous_chunk) & (identity_table["local_identity_after"] == local_identity), "is_inferred"].item()
 
     return identity, is_inferred, is_broken
 
@@ -268,6 +287,22 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                 local_identity = current_chunk.iloc[i]["local_identity"]
                 indexer = identity_table.loc[identity_table["chunk"] == chunk].iloc[i].name
 
+                if number_of_animals==1:
+                    previous_chunk=chunk-1
+                else:
+                    try:
+                        previous_chunk=identity_table.loc[
+                            (identity_table["chunk_after"] == chunk) & (identity_table["local_identity_after"] == local_identity),
+                            "chunk"
+                        ].item()
+        
+                    except Exception as error:
+
+                        print(identity_table.loc[(identity_table["chunk_after"] == chunk)])
+                        print(error)
+                        import ipdb; ipdb.set_trace()
+
+
                 if local_identity == 0:
                     if number_of_animals > 1:
                         warnings.warn(f"Missing identification in chunk {chunk}")
@@ -283,7 +318,9 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
                 else:
                     # get the identity of the blob in the previous chunk that overlapped with a blob in this chunk with the current identity
                     # i.e. the current blob
-                    identity, is_inferred, is_broken=get_identity_of_overlapping_blob_in_previous_chunk(identity_table, chunk, local_identity, strict=strict)
+                    identity, is_inferred, is_broken=get_identity_of_overlapping_blob_in_previous_chunk(
+                        identity_table, previous_chunk, local_identity, strict=strict
+                    )
 
                     # assign to the current blob that identity
                     identity_table.loc[indexer, "identity"] = identity

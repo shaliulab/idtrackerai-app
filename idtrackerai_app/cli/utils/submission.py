@@ -148,6 +148,7 @@ def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cac
     )
     copy_local_settings_cmd = f"cp {local_settings_path} {ANALYSIS_FOLDER}/local_settings.py"
 
+    #import ipdb; ipdb.set_trace()
     # symlink the video files from the main folder to the idtrackerai folder
     try:
         with open(metadata_path, "r") as filehandle:

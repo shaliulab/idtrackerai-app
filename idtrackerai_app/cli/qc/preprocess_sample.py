@@ -34,7 +34,7 @@ def preprocess_sample(store_path, start_chunk, end_chunk, samples_per_chunk):
     last_chunk=start_chunk-1
     store_path=os.path.realpath(store_path)
 
-    cap = VideoCapture(store_path, 1)
+    cap = VideoCapture(store_path, 10)
     try:
         chunksize=int(cap._metadata["chunksize"])
         basedir=os.path.dirname(store_path)
@@ -100,7 +100,7 @@ def visualize_problems(records):
 
     df=pd.DataFrame.from_records(records, columns=[
         "frame_number", "chunk", "video", "frame_idx", "n", "x", "y"
-    ])
+    ]).groupby("frame_number").first().reset_index()
     
     if df.shape[0]>0:
         print(df)
