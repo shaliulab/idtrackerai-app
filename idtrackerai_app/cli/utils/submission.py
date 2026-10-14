@@ -32,7 +32,7 @@ def write_shell_script(path, lines):
 
 
 def make_session_script(
-    config_file, chunk, command, before=[], wait_for=[]
+    config_file, chunk, command, before=(), wait_for=()
 ):
     """
     """
@@ -106,7 +106,7 @@ def save_local_settings(chunk, **kwargs):
     return path
 
 
-def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cache, skip_saving_identification_images, skip_every_frame=1, wait_for=[]):
+def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cache, skip_saving_identification_images, skip_every_frame=1, wait_for=()):
     """ 
     Write a shell script to the filesystem that completely encapsulates one idtrackerai pipeline step for a specific chunk of a specific experiment
 
@@ -148,13 +148,8 @@ def prepare_idtrackerai_job(store_path, chunk, command, reconnect_blobs_from_cac
     )
     copy_local_settings_cmd = f"cp {local_settings_path} {ANALYSIS_FOLDER}/local_settings.py"
 
-    #import ipdb; ipdb.set_trace()
-    # symlink the video files from the main folder to the idtrackerai folder
-    try:
-        with open(metadata_path, "r") as filehandle:
-            extension = yaml.load(filehandle, yaml.SafeLoader)["__store"]["extension"]
-    except Exception as error:
-        raise error
+    if not os.path.exists(metadata_path):
+        raise FileNotFoundError(f"{metadata_path} not found (working directory: {cwd})")
 
     # symlink the config file to idtrackerai too
     basedir = os.path.dirname(os.path.realpath(store_path))
