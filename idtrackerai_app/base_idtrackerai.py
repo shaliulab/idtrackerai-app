@@ -28,7 +28,7 @@ from idtrackerai.animals_detection.segmentation_utils import (
     compute_background,
 )
 
-from idtrackerai.video import Video
+from idtrackerai.video import Video, check_frames_are_square
 
 
 from idtrackerai.animals_detection import AnimalsDetectionAPI
@@ -281,7 +281,11 @@ class BaseIdTrackerAi(
         self.set_controls_enabled(True)
 
     def integration(self):
-        self.load(step="preprocessing")
+        integration_start = time.time()
+        # the blobs are connected by integrate_yolov7,
+        # after the AI predictions are applied
+        self.load(step="preprocessing", connect=False)
+        check_frames_are_square(self.video_object.video_path, self.video_object._chunk)
         self.list_of_blobs = integrate_yolov7(
             store_path=os.path.realpath(self.video_path),
             session_folder = self.video_object.session_folder,
@@ -289,9 +293,11 @@ class BaseIdTrackerAi(
             chunks=[int(self._session.value)],
             input=conf.AI_LABELS_FOLDER,
             output=".",
+            list_of_blobs=self.list_of_blobs,
         )
         self.save(step="integration")
         self.save_success_file("integration")
+        logger.info(f"DONE integration in {time.time() - integration_start} seconds")
         
 
     def save_success_file(self, step):
@@ -327,10 +333,6 @@ class BaseIdTrackerAi(
         except Exception as error:
             logger.error(error, exc_info=True)
             self.critical(str(error), "Error")
-            try:
-                self.save(step="preprocessing")
-            except:
-                pass
             raise error
 
         finally:
@@ -395,7 +397,7 @@ class BaseIdTrackerAi(
         return path
 
 
-    def load(self, step, preferred=None):
+    def load(self, step, preferred=None, connect=True):
         ########################################
         # TODO
         # Ensure state is preserved!
@@ -429,7 +431,7 @@ class BaseIdTrackerAi(
             logger.warning(error)
             self.list_of_fragments=None
 
-        if not self.list_of_blobs.blobs_are_connected:
+        if connect and not self.list_of_blobs.blobs_are_connected:
             if conf.RECONNECT_BLOBS_FROM_CACHE:
                 self.list_of_blobs.reconnect_from_cache()
             else:
@@ -472,12 +474,16 @@ class BaseIdTrackerAi(
 
             logger.info(f"Selected chunk {chunk}")
             logger.info("START: INIT VIDEO OBJECT")
+            # with a single animal, no identification network is trained,
+            # so the episodes can be adjusted to keep all segmentation jobs busy
             self.video_object = Video(
                 video_path=self.video_path,
                 open_multiple_files=self.open_multiple_files,
-                chunk=chunk
+                chunk=chunk,
+                balance_episodes=int(self._number_of_animals.value) == 1,
             )
             logger.info("FINISH: INIT VIDEO OBJECT")
+        check_frames_are_square(self.video_object.video_path, self.video_object._chunk)
         self.video_object.create_session_folder(self._session.value)
 
     def __get_tracking_interval(self):
@@ -518,7 +524,7 @@ class BaseIdTrackerAi(
             self._background_img = None
 
     def __get_mask(self):
-        if self._applyroi:
+        if self._applyroi.value:
             self._mask_img = self.create_mask(
                 self.video_object.original_height,
                 self.video_object.original_width,

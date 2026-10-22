@@ -42,6 +42,8 @@ def start():
 
     logging.getLogger("PyQt5").setLevel(logging.INFO)
     logging.getLogger("matplotlib").setLevel(logging.INFO)
+    # imgstore logs several timing messages per frame read at DEBUG level
+    logging.getLogger("imgstore").setLevel(logging.INFO)
 
     if conf.PYFORMS_MODE == "GUI":
         from .win_idtrackerai import IdTrackerAiGUI as App
@@ -58,6 +60,8 @@ def start():
 
         ex_type, ex, tb = sys.exc_info()
         traceback.print_exception(ex_type, ex, tb)
+        # let the calling script know this step failed
+        sys.exit(1)
 
 
 # Execute the application
