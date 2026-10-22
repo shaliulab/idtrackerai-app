@@ -300,7 +300,6 @@ def propagate_identities(identity_table, chunks, ref_chunk=50, number_of_animals
 
                         print(identity_table.loc[(identity_table["chunk_after"] == chunk)])
                         print(error)
-                        import ipdb; ipdb.set_trace()
 
 
                 if local_identity == 0:
