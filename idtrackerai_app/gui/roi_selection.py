@@ -2,6 +2,8 @@ import cv2
 import math
 import numpy as np
 import logging
+from idtrackerai.animals_detection.segmentation_utils import _split_roi_sign
+from idtrackerai.animals_detection.segmentation_utils import draw_roi_mask
 
 logger = logging.getLogger(__name__)
 
@@ -41,27 +43,11 @@ class ROISelectionWin(object):
         """
         Create a mask based on the selected ROIs
         """
-        mask = np.zeros((height, width), dtype=np.uint8)
-
         if len(self._roi) > 0:
-            for row in self._roi.value:
-                if isinstance(row, str):
-                    points = eval(row)
-                elif isinstance(row[0], str):
-                    try:
-                        points = eval(row[0])
-                    except RecursionError as error:
-                        print(row[0])
-                        points = eval(row[0])
-                else:
-                    points = row
-                if len(points) < 3:
-                    continue
-                mask = cv2.fillPoly(
-                    mask, [np.array(points, np.int32)], (1, 1, 1)
-                )
+            # negative ROIs (rows starting with -) are removed from the mask
+            mask = draw_roi_mask(self._roi.value, (height, width), value=1)
         else:
-            mask = mask + 1
+            mask = np.ones((height, width), dtype=np.uint8)
         return mask
 
     def roi_selection_changed_evt(self):
@@ -87,14 +73,17 @@ class ROISelectionWin(object):
             index = self._roi.selected_row_index
 
             for row_index, row in enumerate(self._roi.value):
-                points = eval(row[0])
+                sign, points = _split_roi_sign(row)
+                points = eval(points)
+                # negative ROIs (excluded areas) in red
+                color = (0, 255, 0) if sign > 0 else (0, 0, 255)
 
                 if len(points) > 3:
                     cv2.polylines(
                         frame,
                         [np.array(points, np.int32)],
                         True,
-                        (0, 255, 0),
+                        color,
                         2,
                         lineType=cv2.LINE_AA,
                     )
